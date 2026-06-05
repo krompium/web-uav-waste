@@ -25,12 +25,11 @@ body, html {
 
 #status {
     font-size: 0.9rem;
-    color: #f39c12; /* Warning orange until connected */
+    color: #f39c12;
 }
 
-/* CRITICAL: The map MUST have a defined height */
 #map {
     height: calc(100vh - 60px);
     width: 100%;
-    background-color: #000000; /* Fallback before tiles load */
+    background-color: #000000;
 }

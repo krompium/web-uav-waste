@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Kelola Data Deteksi Sampah</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .nav-links { margin-bottom: 20px; }
+        .nav-links a { margin-right: 15px; text-decoration: none; color: #3498db; font-weight: bold; }
+        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .data-table th, .data-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
+        .data-table th { background-color: #4CAF50; color: white; }
+        .delete-btn { background-color: #ff4444; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; display: none; margin-bottom: 15px;}
+        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="nav-links">
+            <a href="index.html">⬅ Map</a>
+            <a href="statistics.html">Statistik</a>
+        </div>
+        <h1 style="text-align: center;">Manajemen Data Drone</h1>
+
+        <div class="controls">
+            <button id="deleteSelectedBtn" class="delete-btn">🗑 Hapus Terpilih</button>
+            <select id="sortSelect">
+                <option value="newest">Terbaru</option>
+                <option value="oldest">Terlama</option>
+                <option value="highest">Confidence Tertinggi</option>
+                <option value="lowest">Confidence Terendah</option>
+            </select>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll"></th>
+                    <th>Waktu (WIB)</th>
+                    <th>Label</th>
+                    <th>Confidence</th>
+                    <th>Koordinat</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                </tbody>
+        </table>
+    </div>
+
+    <script type="module">
+        import { db, collection, onSnapshot, deleteDoc, doc, parseFirestoreTimestamp } from './firebase-config.js';
+
+        let allDetections = [];
+        const tableBody = document.getElementById('table-body');
+
+        // Fetch & Listen Real-Time
+        onSnapshot(collection(db, "waste_detections_v2"), (snapshot) => {
+            allDetections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            renderTable();
+        });
+
+        function renderTable() {
+            const sortType = document.getElementById('sortSelect').value;
+            let sortedData = [...allDetections];
+
+            sortedData.sort((a, b) => {
+                const timeA = parseFirestoreTimestamp(a.timestamp);
+                const timeB = parseFirestoreTimestamp(b.timestamp);
+                if (sortType === 'newest') return timeB - timeA;
+                if (sortType === 'oldest') return timeA - timeB;
+                if (sortType === 'highest') return (b.confidence || 0) - (a.confidence || 0);
+                if (sortType === 'lowest') return (a.confidence || 0) - (b.confidence || 0);
+                return 0;
+            });
+
+            tableBody.innerHTML = '';
+            sortedData.forEach(d => {
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><input type="checkbox" class="data-checkbox" value="${d.id}"></td>
+                        <td>${d.timestamp || '-'}</td>
+                        <td>${d.label || 'Unknown'}</td>
+                        <td>${d.confidence || 0}%</td>
+                        <td>${d.latitude ? d.latitude.toFixed(6) : '-'}, ${d.longitude ? d.longitude.toFixed(6) : '-'}</td>
+                    </tr>
+                `;
+            });
+
+            document.querySelectorAll('.data-checkbox').forEach(cb => 
+                cb.addEventListener('change', updateDeleteBtn)
+            );
+            updateDeleteBtn();
+        }
+
+        // Delete Logic
+        document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
+            const checked = document.querySelectorAll('.data-checkbox:checked');
+            if (checked.length === 0) return;
+            if (confirm(`Hapus ${checked.length} data?`)) {
+                const promises = Array.from(checked).map(cb => deleteDoc(doc(db, "waste_detections_v2", cb.value)));
+                await Promise.all(promises);
+                document.getElementById('selectAll').checked = false;
+            }
+        });
+
+        // UI Helpers
+        document.getElementById('sortSelect').addEventListener('change', renderTable);
+        document.getElementById('selectAll').addEventListener('change', (e) => {
+            document.querySelectorAll('.data-checkbox').forEach(cb => cb.checked = e.target.checked);
+            updateDeleteBtn();
+        });
+
+        function updateDeleteBtn() {
+            const count = document.querySelectorAll('.data-checkbox:checked').length;
+            document.getElementById('deleteSelectedBtn').style.display = count > 0 ? 'inline-block' : 'none';
+        }
+    </script>
+</body>
+</html>
