@@ -2,16 +2,15 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Heatmap Sampah UAV</title>
+    <title>Google Maps Heatmap Sampah UAV</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link rel="stylesheet" href="/style.css">
     <style>
         body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
-        #map { height: 100vh; width: 100vw; transition: opacity 1s; }
+        #map { height: 100vh; width: 100vw; }
         #legend { position: absolute; bottom: 30px; left: 30px; background: rgba(255,255,255,0.95); color: #333; padding: 15px; border-radius: 8px; z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 200px; }
         .controls { position: absolute; top: 20px; right: 20px; z-index: 999; display: flex; gap: 10px; }
-        .time-button { padding: 10px 15px; background: white; border: 1px solid #ccc; border-radius: 5px; cursor: pointer; }
+        .time-button { padding: 10px 15px; background: white; border: 1px solid #ccc; border-radius: 5px; cursor: pointer; font-weight: bold; }
         .time-button.active { background: #3498db; color: white; border-color: #3498db; }
         #mode-toggle { padding: 10px; border-radius: 50%; cursor: pointer; border: none; font-size: 18px; background: white;}
         .nav-links { position: absolute; top: 20px; left: 60px; z-index: 999; background: white; padding: 10px; border-radius: 8px;}
@@ -33,25 +32,33 @@
         <button class="time-button active" data-filter="all">Semua Waktu</button>
         <button class="time-button" data-filter="today">Hari Ini</button>
         <button class="time-button" data-filter="week">Minggu Ini</button>
+        <button class="time-button" data-filter="month">Bulan Ini</button>
         <button id="mode-toggle">🌙</button>
     </div>
 
     <div id="legend">
         <h4 style="margin-top:0; margin-bottom:10px;">Intensitas Tumpukan</h4>
         <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 5px; font-weight: bold;">
-            <span>Tersebar (1)</span>
-            <span>Menumpuk (+5)</span>
+            <span>Tersebar</span>
+            <span>Menumpuk</span>
         </div>
-        <div style="width: 100%; height: 15px; background: linear-gradient(to right, blue, cyan, lime, yellow, red); border-radius: 4px;"></div>
+        <div style="width: 100%; height: 15px; background: linear-gradient(to right, rgba(0,0,255,0.5), cyan, lime, yellow, red); border-radius: 4px;"></div>
     </div>
 
     <div id="map"></div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    
-    <script src="/heatmap.min.js"></script>
-    <script src="/leaflet-heatmap.js"></script>
-    
+    <script>
+        window.googleMapsBridgeCallback = function() {
+            if (window.jalankanInisialisasiPeta) {
+                window.jalankanInisialisasiPeta();
+            } else {
+                window.googleMapsScriptSudahSiap = true;
+            }
+        };
+    </script>
+
     <script type="module" src="/app.js"></script>
+
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDaN7fGUo5I4rDQNhNS5uJA97CJp5gh_Qw&v=3.64&libraries=visualization&callback=googleMapsBridgeCallback"></script>
 </body>
 </html>

@@ -1,27 +1,20 @@
 import { db, collection, onSnapshot, parseFirestoreTimestamp } from './firebase-config.js';
 
-const map = L.map('map', {
-    maxZoom: 24,
-    minZoom: 3,          
-    worldCopyJump: true 
-}).setView([-6.2, 106.8], 13);
-
-const lightStyle = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { 
-    attribution: '© OSM',
-    maxZoom: 24,
-    maxNativeZoom: 19
-});
-
-const darkStyle = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { 
-    attribution: '© CARTO',
-    maxZoom: 24,
-    maxNativeZoom: 19
-});
-
+let map;
 let heatmapLayer = null; 
-let markerLayer = L.layerGroup().addTo(map);
+let markers = [];
 let allDetections = [];
 let mapInitialized = false;
+let infoWindow = null; // Variabel disiapkan di sini
+
+// 1. Konfigurasi Dark Mode untuk Google Maps
+const darkMapStyle = [
+  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ visibility: "off" }] } 
+];
 
 const modeBtn = document.getElementById('mode-toggle');
 let isDark = localStorage.getItem('darkMode') === 'true';
@@ -30,13 +23,11 @@ function updateTheme() {
     if (isDark) {
         document.body.classList.add('dark-mode');
         if (modeBtn) modeBtn.textContent = '☀️';
-        map.removeLayer(lightStyle);
-        darkStyle.addTo(map);
+        if (map) map.setOptions({ styles: darkMapStyle });
     } else {
         document.body.classList.remove('dark-mode');
         if (modeBtn) modeBtn.textContent = '🌙';
-        map.removeLayer(darkStyle);
-        lightStyle.addTo(map);
+        if (map) map.setOptions({ styles: [] }); 
     }
 }
 updateTheme();
@@ -49,12 +40,58 @@ if (modeBtn) {
     });
 }
 
-onSnapshot(collection(db, "waste_detections_v2"), (snapshot) => {
-    allDetections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    applyFilter();
-});
+// 2. Fungsi Utama Inisialisasi Google Maps
+function initMap() {
+    map = new google.maps.Map(document.getElementById("map"), {
+        center: { lat: -6.2, lng: 106.8 },
+        zoom: 13,
+        minZoom: 5,        
+        maxZoom: 22,       
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
+    });
 
+    updateTheme(); 
+
+    // PENTING: InfoWindow diinisialisasi SETELAH map siap
+    infoWindow = new google.maps.InfoWindow();
+
+    // INISIALISASI HEATMAP SATU KALI SAJA
+    heatmapLayer = new google.maps.visualization.HeatmapLayer({
+        data: [],
+        map: map,
+        radius: 35, 
+        opacity: 0.8,
+        gradient: [
+            'rgba(0, 0, 255, 0)',
+            'rgba(0, 255, 255, 1)',
+            'rgba(0, 255, 0, 1)',
+            'rgba(255, 255, 0, 1)',
+            'rgba(255, 0, 0, 1)'
+        ]
+    });
+
+    map.addListener('zoom_changed', toggleMarkersOnZoom);
+
+    // 3. Tarik Data Real-Time dari Firebase
+    onSnapshot(collection(db, "waste_detections_v2"), (snapshot) => {
+        allDetections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        applyFilter();
+    });
+}
+
+// EKSEKUSI JEMBATAN PENGAMAN
+if (window.googleMapsScriptSudahSiap) {
+    initMap();
+} else {
+    window.jalankanInisialisasiPeta = initMap;
+}
+
+// 4. Logika Filter Waktu
 function applyFilter() {
+    if (!map || !heatmapLayer) return; 
+
     const activeBtn = document.querySelector('.time-button.active');
     const filterType = activeBtn ? activeBtn.getAttribute('data-filter') : 'all';
     const now = Date.now();
@@ -64,68 +101,83 @@ function applyFilter() {
         const dTime = parseFirestoreTimestamp(d.timestamp);
         if (filterType === 'today') return (now - dTime) <= oneDay;
         if (filterType === 'week') return (now - dTime) <= (7 * oneDay);
+        if (filterType === 'month') return (now - dTime) <= (30 * oneDay);
         return true; 
     });
 
-    renderSmoothHeatmap(filtered);
+    updateMapData(filtered);
 }
 
-function renderSmoothHeatmap(data) {
-    if (heatmapLayer) map.removeLayer(heatmapLayer);
-    markerLayer.clearLayers();
-    
-    if (data.length === 0) return;
-
-    const changedDataFormat = {
-        max: 5, 
-        data: data.map(d => {
-            return {
-                lat: d.latitude,
-                lng: d.longitude,
-                count: 1 
-            };
-        })
-    };
-
-    var cfg = {
-        "radius": 25, 
-        "maxOpacity": 0.85,
-        "scaleRadius": false, 
-        "useLocalExtrema": false,
-        latField: 'lat',
-        lngField: 'lng',
-        valueField: 'count',
-        gradient: {
-            '0.1': 'blue',
-            '0.4': 'cyan',
-            '0.6': 'lime',
-            '0.8': 'yellow',
-            '1.0': 'red'
-        }
-    };
-
-    heatmapLayer = new HeatmapOverlay(cfg);
-    heatmapLayer.setData(changedDataFormat);
-    map.addLayer(heatmapLayer);
-
-    if (map.getZoom() > 16) {
-        data.forEach(d => {
-            L.circleMarker([d.latitude, d.longitude], {
-                radius: 3, color: '#fff', weight: 1, fillColor: '#000', fillOpacity: 1
-            }).addTo(markerLayer).bindPopup(`<b>${d.label}</b><br>${d.confidence}%`);
-        });
+// 5. Engine Render Google Maps
+function updateMapData(data) {
+    if (data.length === 0) {
+        heatmapLayer.setData([]);
+        clearMarkers();
+        return;
     }
+
+    const heatMapData = data.map(d => ({
+        location: new google.maps.LatLng(parseFloat(d.latitude), parseFloat(d.longitude)),
+        weight: 1 
+    }));
+    heatmapLayer.setData(heatMapData);
+
+    clearMarkers();
+    const currentZoom = map.getZoom();
+    
+    data.forEach(d => {
+        const marker = new google.maps.Marker({
+            position: { lat: parseFloat(d.latitude), lng: parseFloat(d.longitude) },
+            map: currentZoom > 16 ? map : null, 
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 4,
+                fillColor: "#000",
+                fillOpacity: 1,
+                strokeWeight: 1,
+                strokeColor: "#fff"
+            }
+        });
+
+        // Buka Pop-Up Info Saat Diklik
+        marker.addListener('click', () => {
+            infoWindow.setContent(`
+                <div style="color: #333;">
+                    <b style="font-size: 14px;">${d.label}</b><br>
+                    Keyakinan: ${d.confidence}%<br>
+                    <small style="color: #777;">${d.timestamp}</small>
+                </div>
+            `);
+            infoWindow.open({
+                anchor: marker,
+                map: map,
+                shouldFocus: false
+            });
+        });
+
+        markers.push(marker);
+    });
 
     if (!mapInitialized) {
-        const lats = data.map(d => d.latitude);
-        const lons = data.map(d => d.longitude);
-        const bounds = [
-            [Math.min(...lats), Math.min(...lons)],
-            [Math.max(...lats), Math.max(...lons)]
-        ];
-        map.fitBounds(bounds, { padding: [50, 50] });
+        const bounds = new google.maps.LatLngBounds();
+        data.forEach(d => {
+            bounds.extend(new google.maps.LatLng(parseFloat(d.latitude), parseFloat(d.longitude)));
+        });
+        map.fitBounds(bounds);
         mapInitialized = true;
     }
+}
+
+function clearMarkers() {
+    markers.forEach(m => m.setMap(null));
+    markers = [];
+}
+
+function toggleMarkersOnZoom() {
+    const zoomLvl = map.getZoom();
+    markers.forEach(m => {
+        m.setMap(zoomLvl > 16 ? map : null);
+    });
 }
 
 document.querySelectorAll('.time-button').forEach(btn => {
@@ -135,5 +187,3 @@ document.querySelectorAll('.time-button').forEach(btn => {
         applyFilter();
     });
 });
-
-map.on('zoomend', applyFilter);
