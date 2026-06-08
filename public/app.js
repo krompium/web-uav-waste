@@ -5,90 +5,113 @@ let heatmapLayer = null;
 let markers = [];
 let allDetections = [];
 let mapInitialized = false;
-let infoWindow = null; // Variabel disiapkan di sini
+let infoWindow = null;
 
-// 1. Konfigurasi Dark Mode untuk Google Maps
-const darkMapStyle = [
-  { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
-  { featureType: "poi", elementType: "labels.text.fill", stylers: [{ visibility: "off" }] } 
-];
-
-const modeBtn = document.getElementById('mode-toggle');
-let isDark = localStorage.getItem('darkMode') === 'true';
-
-function updateTheme() {
-    if (isDark) {
-        document.body.classList.add('dark-mode');
-        if (modeBtn) modeBtn.textContent = '☀️';
-        if (map) map.setOptions({ styles: darkMapStyle });
-    } else {
-        document.body.classList.remove('dark-mode');
-        if (modeBtn) modeBtn.textContent = '🌙';
-        if (map) map.setOptions({ styles: [] }); 
-    }
-}
-updateTheme();
-
-if (modeBtn) {
-    modeBtn.addEventListener('click', () => {
-        isDark = !isDark;
-        localStorage.setItem('darkMode', isDark);
-        updateTheme();
-    });
-}
-
-// 2. Fungsi Utama Inisialisasi Google Maps
+// Inisialisasi Utama Google Maps Command Center
 function initMap() {
     map = new google.maps.Map(document.getElementById("map"), {
         center: { lat: -6.2, lng: 106.8 },
         zoom: 13,
-        minZoom: 5,        
+        minZoom: 3,        
         maxZoom: 22,       
-        mapTypeControl: false,
-        streetViewControl: false,
-        fullscreenControl: false
+        
+        mapTypeControl: true, // Bilah navigasi "Map" & "Satellite" di Kiri Atas
+        mapTypeControlOptions: {
+            style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+            position: google.maps.ControlPosition.TOP_LEFT
+        },
+        zoomControl: true,              // Tombol + - di Kanan Bawah
+        zoomControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_BOTTOM
+        },
+        streetViewControl: true,        // Orang kuning Pegman di Kanan Bawah
+        streetViewControlOptions: {
+            position: google.maps.ControlPosition.RIGHT_BOTTOM
+        },
+        fullscreenControl: true,        // Tombol layar penuh di Kanan Atas
+        fullscreenControlOptions: {
+            position: google.maps.ControlPosition.TOP_RIGHT
+        },
+        rotateControl: false,           // MEMATIKAN KOMPAS
+        scaleControl: true              // Garis skala jarak di Kiri Bawah
     });
 
-    updateTheme(); 
-
-    // PENTING: InfoWindow diinisialisasi SETELAH map siap
     infoWindow = new google.maps.InfoWindow();
 
-    // INISIALISASI HEATMAP SATU KALI SAJA
+    // Suntikkan Tombol Lokasi Saat Ini (Hanya lokasi, tanpa 3D)
+    setupNativeCustomControls();
+
     heatmapLayer = new google.maps.visualization.HeatmapLayer({
         data: [],
         map: map,
         radius: 35, 
         opacity: 0.8,
         gradient: [
-            'rgba(0, 0, 255, 0)',
-            'rgba(0, 255, 255, 1)',
-            'rgba(0, 255, 0, 1)',
-            'rgba(255, 255, 0, 1)',
-            'rgba(255, 0, 0, 1)'
+            'rgba(0, 0, 255, 0)', 'rgba(0, 255, 255, 1)', 'rgba(0, 255, 0, 1)',
+            'rgba(255, 255, 0, 1)', 'rgba(255, 0, 0, 1)'
         ]
     });
 
     map.addListener('zoom_changed', toggleMarkersOnZoom);
 
-    // 3. Tarik Data Real-Time dari Firebase
     onSnapshot(collection(db, "waste_detections_v2"), (snapshot) => {
         allDetections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         applyFilter();
     });
 }
 
-// EKSEKUSI JEMBATAN PENGAMAN
-if (window.googleMapsScriptSudahSiap) {
-    initMap();
-} else {
-    window.jalankanInisialisasiPeta = initMap;
+if (window.googleMapsScriptSudahSiap) { initMap(); } 
+else { window.jalankanInisialisasiPeta = initMap; }
+
+// MEMBANGUN WIDGET KUSTOM BERGAYA RESMI GOOGLE (Hanya Widget Geolokasi)
+function setupNativeCustomControls() {
+    const container = document.createElement("div");
+    container.style.display = "flex";
+    container.style.flexDirection = "column";
+    container.style.gap = "6px";
+    container.style.marginRight = "10px";
+    container.style.marginBottom = "10px";
+
+    const locationBtn = document.createElement("button");
+    locationBtn.title = "Tunjukkan Lokasi Saya Saat Ini";
+    locationBtn.style.backgroundColor = "#fff";
+    locationBtn.style.border = "none";
+    locationBtn.style.width = "40px";
+    locationBtn.style.height = "40px";
+    locationBtn.style.borderRadius = "2px";
+    locationBtn.style.boxShadow = "0 2px 6px rgba(0,0,0,0.3)";
+    locationBtn.style.cursor = "pointer";
+    locationBtn.style.display = "flex";
+    locationBtn.style.alignItems = "center";
+    locationBtn.style.justifyContent = "center";
+    locationBtn.innerHTML = `
+        <svg viewBox="0 0 24 24" style="width:20px; height:20px; fill:#666;">
+            <path d="M12 8c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4-1.79-4-4-4zm8.94 3c-.55-4.45-4.04-7.94-8.49-8.49V1c0-.55-.45-1-1-1s-1 .45-1 1v1.51C6.01 3.06 2.52 6.55 1.97 11H.5c-.55 0-1 .45-1 1s.45 1 1 1h1.47c.55 4.45 4.04 7.94 8.49 8.49V23c0 .55.45 1 1 1s1-.45 1-1v-1.51c4.45-.55 7.94-4.04 8.49-8.49H23c.55 0 1-.45 1-1s-.45-1-1-1h-1.06zM12 21c-4.97 0-9-4.03-9-9s4.03-9 9-9 9 4.03 9 9-4.03 9-9 9z"/>
+        </svg>
+    `;
+    
+    locationBtn.addEventListener("click", () => {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition((position) => {
+                const pos = { lat: position.coords.latitude, lng: position.coords.longitude };
+                map.setCenter(pos);
+                map.setZoom(17);
+                new google.maps.Marker({
+                    position: pos, map: map, title: "Lokasi Anda",
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE, scale: 7,
+                        fillColor: "#4285F4", fillOpacity: 1, strokeWeight: 2, strokeColor: "#fff"
+                    }
+                });
+            }, () => { alert("Pastikan izin GPS browser Anda aktif."); });
+        }
+    });
+
+    container.appendChild(locationBtn);
+    map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(container);
 }
 
-// 4. Logika Filter Waktu
+// Logika Penghitungan Filter Jangka Waktu
 function applyFilter() {
     if (!map || !heatmapLayer) return; 
 
@@ -108,7 +131,7 @@ function applyFilter() {
     updateMapData(filtered);
 }
 
-// 5. Engine Render Google Maps
+// Engine Render Data Sampah
 function updateMapData(data) {
     if (data.length === 0) {
         heatmapLayer.setData([]);
@@ -130,16 +153,11 @@ function updateMapData(data) {
             position: { lat: parseFloat(d.latitude), lng: parseFloat(d.longitude) },
             map: currentZoom > 16 ? map : null, 
             icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 4,
-                fillColor: "#000",
-                fillOpacity: 1,
-                strokeWeight: 1,
-                strokeColor: "#fff"
+                path: google.maps.SymbolPath.CIRCLE, scale: 4,
+                fillColor: "#000", fillOpacity: 1, strokeWeight: 1, strokeColor: "#fff"
             }
         });
 
-        // Buka Pop-Up Info Saat Diklik
         marker.addListener('click', () => {
             infoWindow.setContent(`
                 <div style="color: #333;">
@@ -148,11 +166,7 @@ function updateMapData(data) {
                     <small style="color: #777;">${d.timestamp}</small>
                 </div>
             `);
-            infoWindow.open({
-                anchor: marker,
-                map: map,
-                shouldFocus: false
-            });
+            infoWindow.open({ anchor: marker, map: map, shouldFocus: false });
         });
 
         markers.push(marker);
@@ -160,9 +174,7 @@ function updateMapData(data) {
 
     if (!mapInitialized) {
         const bounds = new google.maps.LatLngBounds();
-        data.forEach(d => {
-            bounds.extend(new google.maps.LatLng(parseFloat(d.latitude), parseFloat(d.longitude)));
-        });
+        data.forEach(d => bounds.extend(new google.maps.LatLng(parseFloat(d.latitude), parseFloat(d.longitude))));
         map.fitBounds(bounds);
         mapInitialized = true;
     }
@@ -175,9 +187,7 @@ function clearMarkers() {
 
 function toggleMarkersOnZoom() {
     const zoomLvl = map.getZoom();
-    markers.forEach(m => {
-        m.setMap(zoomLvl > 16 ? map : null);
-    });
+    markers.forEach(m => m.setMap(zoomLvl > 16 ? map : null));
 }
 
 document.querySelectorAll('.time-button').forEach(btn => {

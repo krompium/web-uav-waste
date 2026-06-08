@@ -2,30 +2,31 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Google Maps Heatmap Sampah UAV</title>
+    <title>Heatmap Sampah dari Firebase</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/style.css">
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
+        body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; overflow: hidden; }
         #map { height: 100vh; width: 100vw; }
-        #legend { position: absolute; bottom: 30px; left: 30px; background: rgba(255,255,255,0.95); color: #333; padding: 15px; border-radius: 8px; z-index: 999; box-shadow: 0 2px 8px rgba(0,0,0,0.15); width: 200px; }
-        .controls { position: absolute; top: 20px; right: 20px; z-index: 999; display: flex; gap: 10px; }
-        .time-button { padding: 10px 15px; background: white; border: 1px solid #ccc; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .time-button.active { background: #3498db; color: white; border-color: #3498db; }
-        #mode-toggle { padding: 10px; border-radius: 50%; cursor: pointer; border: none; font-size: 18px; background: white;}
-        .nav-links { position: absolute; top: 20px; left: 60px; z-index: 999; background: white; padding: 10px; border-radius: 8px;}
-        .nav-links a { margin-right: 15px; text-decoration: none; color: #333; font-weight: bold; }
         
-        body.dark-mode #legend, body.dark-mode .time-button, body.dark-mode #mode-toggle, body.dark-mode .nav-links {
-            background: #222; color: #fff; border-color: #444;
-        }
+        /* TATA LETAK: Kotak Legenda di Kiri Bawah */
+        #legend { position: absolute; bottom: 30px; left: 30px; background: rgba(255,255,255,0.95); color: #333; padding: 15px; border-radius: 4px; z-index: 999; box-shadow: 0 2px 6px rgba(0,0,0,0.3); width: 200px; }
+        
+        /* TATA LETAK: Filter Waktu Berada di Tengah-Tengah Atas Secara Horizontal */
+        .controls { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 999; display: flex; gap: 8px; }
+        .time-button { padding: 10px 14px; background: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 13px; color: #565656; transition: background 0.2s; }
+        .time-button:hover { background: #f5f5f5; color: #222; }
+        .time-button.active { background: #3498db; color: white; }
+        
+        /* TATA LETAK: Navigasi Statistics Berada di Kanan Atas (Samping Kiri Tombol Fullscreen Asli) */
+        .nav-links { position: absolute; top: 12px; right: 60px; z-index: 999; background: white; padding: 0 15px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); height: 40px; display: flex; align-items: center; }
+        .nav-links a { text-decoration: none; color: #565656; font-weight: bold; font-size: 13px; }
+        .nav-links a:hover { color: #222; }
     </style>
 </head>
 <body>
     <div class="nav-links">
-        <a href="/">Map</a>
-        <a href="/statistics">Statistics</a>
-        <a href="/manage-data">Manage Data</a>
+        <a href="statistics.html">Statistics</a>
     </div>
 
     <div class="controls">
@@ -33,7 +34,6 @@
         <button class="time-button" data-filter="today">Hari Ini</button>
         <button class="time-button" data-filter="week">Minggu Ini</button>
         <button class="time-button" data-filter="month">Bulan Ini</button>
-        <button id="mode-toggle">🌙</button>
     </div>
 
     <div id="legend">
@@ -47,18 +47,13 @@
 
     <div id="map"></div>
 
-    <script>
+    <script style="display:none;">
         window.googleMapsBridgeCallback = function() {
-            if (window.jalankanInisialisasiPeta) {
-                window.jalankanInisialisasiPeta();
-            } else {
-                window.googleMapsScriptSudahSiap = true;
-            }
+            if (window.jalankanInisialisasiPeta) { window.jalankanInisialisasiPeta(); } 
+            else { window.googleMapsScriptSudahSiap = true; }
         };
     </script>
-
     <script type="module" src="/app.js"></script>
-
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDaN7fGUo5I4rDQNhNS5uJA97CJp5gh_Qw&v=3.64&libraries=visualization&callback=googleMapsBridgeCallback"></script>
 </body>
 </html>
