@@ -1,4 +1,4 @@
-import { db, collection, onSnapshot, parseFirestoreTimestamp } from './firebase-config.js';
+import { db, collection, onSnapshot } from './firebase-config.js';
 
 let map;
 let heatmapLayer = null; 
@@ -23,13 +23,44 @@ function haversineDistance(lat1, lng1, lat2, lng2) {
     return R * c;
 }
 
-// RADIUS DECLUSTERING BERDASARKAN LEVEL ZOOM
+// RADIUS DECLUSTERING
 function getDynamicRadiusMeters(zoom) {
     if (zoom >= 20) return 0;       
     if (zoom >= 18) return 5;       
     if (zoom >= 16) return 20;      
     if (zoom >= 14) return 50;      
     return 100;                     
+}
+
+// PARSER WAKTU ROBUST 
+function parseTimestamp(val) {
+    if (!val) return null;
+    if (val.toDate) return val.toDate();
+    if (val.seconds) return new Date(val.seconds * 1000);
+
+    let d = new Date(val);
+    if (!isNaN(d.getTime())) return d;
+
+    if (typeof val === 'string') {
+        try {
+            let cleanStr = val.replace(" at ", " ").replace(" UTC", " GMT");
+            d = new Date(cleanStr);
+            if (!isNaN(d.getTime())) return d;
+
+            const match = val.match(/^([A-Za-z]+ \d{1,2}, \d{4}) at (\d{1,2}:\d{2}:\d{2}) (AM|PM) UTC([+-]\d{4})$/);
+            if (match) {
+                const [_, datePart, timePart, meridian, timezone] = match;
+                let [hours, minutes, seconds] = timePart.split(':').map(Number);
+                if (meridian === 'PM' && hours !== 12) hours += 12;
+                if (meridian === 'AM' && hours === 12) hours = 0;
+                
+                const timeString = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                d = new Date(`${datePart} ${timeString} GMT${timezone}`);
+                if (!isNaN(d.getTime())) return d;
+            }
+        } catch(e) {}
+    }
+    return null;
 }
 
 function initMap() {
@@ -73,7 +104,14 @@ function initMap() {
     });
 
     onSnapshot(collection(db, "waste_detections_v2"), (snapshot) => {
-        allDetections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        allDetections = [];
+        snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            const parsedTime = parseTimestamp(data.timestamp);
+            if (parsedTime !== null) {
+                allDetections.push({ id: doc.id, ...data, parsedTime: parsedTime });
+            }
+        });
         applyFilter();
     });
 }
@@ -126,15 +164,31 @@ function applyFilter() {
 
     const activeBtn = document.querySelector('.time-button.active');
     const filterType = activeBtn ? activeBtn.getAttribute('data-filter') : 'all';
-    const now = Date.now();
-    const oneDay = 24 * 60 * 60 * 1000;
+    
+    const now = new Date();
+    let startDate, endDate;
+
+    if (filterType === 'today') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    } 
+    else if (filterType === 'week') {
+        const dayOfWeek = now.getDay(); 
+        const diffToMonday = (dayOfWeek === 0 ? 6 : dayOfWeek - 1); 
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0);
+        endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 6, 23, 59, 59, 999);
+    } 
+    else if (filterType === 'month') {
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    } 
+    else {
+        startDate = new Date(0); 
+        endDate = new Date(8640000000000000); 
+    }
 
     filteredDetections = allDetections.filter(d => {
-        const dTime = parseFirestoreTimestamp(d.timestamp);
-        if (filterType === 'today') return (now - dTime) <= oneDay;
-        if (filterType === 'week') return (now - dTime) <= (7 * oneDay);
-        if (filterType === 'month') return (now - dTime) <= (30 * oneDay);
-        return true; 
+        return d.parsedTime >= startDate && d.parsedTime <= endDate;
     });
 
     const heatMapData = filteredDetections.map(d => ({
@@ -223,36 +277,36 @@ function renderClusteredMarkers(data, radiusMeters) {
 
                 infoWindow.setContent(`
                     <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 10px; color: #64748b; text-align: center; min-width: 200px;">
-                        <span style="font-size: 13px;">📡 Mengambil alamat dari satelit...</span>
+                        <span style="font-size: 13px;">Mengambil alamat dari satelit...</span>
                     </div>
                 `);
                 infoWindow.open({ anchor: marker, map: map, shouldFocus: false });
 
                 geocoder.geocode({ location: latlng }, (results, status) => {
-                    let address = "Alamat tidak ditemukan";
-                    if (status === "OK" && results[0]) {
-                        address = results[0].formatted_address; 
+                    let address = "Alamat tidak ditemukan.";
+                    if (status === "OK" && results[0]) address = results[0].formatted_address; 
+
+                    let tsStr = "Waktu tidak diketahui";
+                    if(c.rawRef.parsedTime) {
+                        tsStr = c.rawRef.parsedTime.toLocaleString('id-ID');
+                    } else if (c.rawRef.timestamp) {
+                        tsStr = c.rawRef.timestamp;
                     }
 
                     const popUpContent = `
                         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; min-width: 220px; max-width: 280px; padding: 4px; color: #1e293b;">
-                            
                             <div style="font-size: 15px; font-weight: 800; color: #d97706; margin-bottom: 8px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
                                 Lokasi sampah ditemukan
                             </div>
-                            
                             <div style="font-size: 13px; line-height: 1.5; color: #334155; margin-bottom: 12px; font-weight: 500;">
                                 ${address}
                             </div>
-                            
                             <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 6px 8px; border-radius: 6px; font-size: 12px; font-family: 'Courier New', Courier, monospace; color: #0f172a; margin-bottom: 12px; text-align: center;">
                                 <b>Koordinat:</b> ${c.lat.toFixed(6)}, ${c.lng.toFixed(6)}
                             </div>
-
                             <div style="font-size: 11px; color: #64748b; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 6px;">
-                                ${c.rawRef.timestamp}
+                                ${tsStr}
                             </div>
-                            
                         </div>
                     `;
                     infoWindow.setContent(popUpContent);

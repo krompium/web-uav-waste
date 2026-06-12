@@ -17,6 +17,51 @@
         .nav-links { position: absolute; top: 12px; right: 60px; z-index: 999; background: white; padding: 0 15px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); height: 40px; display: flex; align-items: center; }
         .nav-links a { text-decoration: none; color: #565656; font-weight: bold; font-size: 13px; }
         .nav-links a:hover { color: #222; }
+
+        @media screen and (max-width: 768px) {
+            .controls {
+                top: 65px; 
+                left: 10px;
+                transform: none;
+                width: calc(100vw - 20px);
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .time-button {
+                flex: 1 1 40%;
+                text-align: center;
+                font-size: 12px;
+                padding: 8px;
+            }
+            .nav-links {
+                top: 10px;
+                right: 55px; 
+                height: 36px;
+                padding: 0 12px;
+            }
+            #legend {
+                width: 200px !important; 
+                left: 10px !important;
+                bottom: 25px !important;
+                padding: 8px 10px !important;
+                border-radius: 6px !important;
+            }
+            #legend h4 {
+                font-size: 12px !important;
+                margin-bottom: 6px !important;
+            }
+            #legend > div:nth-of-type(1) { 
+                font-size: 8px !important; 
+                margin-bottom: 3px !important;
+            }
+            #legend > div:nth-of-type(2) { 
+                height: 10px !important;
+            }
+            #legend > div:nth-of-type(3) { 
+                font-size: 9px !important;
+                margin-top: 4px !important;
+            }
+        }
     </style>
 </head>
 <body>
