@@ -1,121 +1,402 @@
 <!DOCTYPE html>
-<html>
+<html lang="id">
 <head>
-    <title>Kelola Data Deteksi Sampah</title>
+    <meta charset="UTF-8">
+    <title>Manajemen Data — UAV Waste Detection System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/style.css">
     <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .nav-links { margin-bottom: 20px; }
-        .nav-links a { margin-right: 15px; text-decoration: none; color: #3498db; font-weight: bold; }
-        .data-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-        .data-table th, .data-table td { padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }
-        .data-table th { background-color: #4CAF50; color: white; }
-        .delete-btn { background-color: #ff4444; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; display: none; margin-bottom: 15px;}
-        .controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        select { padding: 8px; border-radius: 4px; border: 1px solid #ccc; }
+        .page-wrap {
+            max-width: 1360px;
+            margin: 0 auto;
+            padding: 24px 24px 80px;
+        }
+        .panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-std);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border-std);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        .tabs {
+            display: inline-flex;
+            background: var(--bg-subtle);
+            border: 1px solid var(--border-std);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        .tab-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 14px;
+            border-radius: 4px;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .tab-btn.active {
+            background: var(--bg-surface);
+            color: var(--text-main);
+            box-shadow: var(--shadow-sm);
+        }
+        .controls-bar {
+            padding: 12px 20px;
+            border-bottom: 1px solid var(--border-std);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            background: #fcfcfd;
+        }
+        .filter-inputs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .btn-danger {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            background: var(--danger);
+            color: #ffffff;
+            border: none;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-danger:hover { background: var(--danger-hover); }
+        select, input[type="search"] {
+            padding: 7px 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-strong);
+            font-size: 12.5px;
+            color: var(--text-main);
+            background: var(--bg-surface);
+        }
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            font-variant-numeric: tabular-nums;
+        }
+        .data-table th, .data-table td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-std);
+            white-space: nowrap;
+        }
+        .data-table th {
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 11.5px;
+        }
+        .data-table tbody tr:hover { background: #f8fafc; }
+
+        @media screen and (max-width: 640px) {
+            .page-wrap { padding: 14px 12px 60px; }
+            .panel-header, .controls-bar { padding: 12px 14px; }
+            .tabs { width: 100%; }
+            .tab-btn { flex: 1; text-align: center; padding: 6px 8px; font-size: 11.5px; }
+            .filter-inputs { width: 100%; }
+            .filter-inputs input[type="search"],
+            .filter-inputs select { flex: 1 1 100%; width: 100%; }
+            .hide-sm { display: none; }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="nav-links">
-            <a href="index.html">⬅ Map</a>
-            <a href="statistics.html">Statistik</a>
-        </div>
-        <h1 style="text-align: center;">Manajemen Data Drone</h1>
 
-        <div class="controls">
-            <button id="deleteSelectedBtn" class="delete-btn">🗑 Hapus Terpilih</button>
-            <select id="sortSelect">
-                <option value="newest">Terbaru</option>
-                <option value="oldest">Terlama</option>
-                <option value="highest">Confidence Tertinggi</option>
-                <option value="lowest">Confidence Terendah</option>
-            </select>
+<header class="topbar">
+    <a href="index.html" class="topbar-brand">
+        <span class="brand-mark">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </span>
+        UAV Waste Detection
+        <span class="tag">v2.0</span>
+    </a>
+    <nav class="topbar-nav">
+        <a href="index.html" class="nav-item">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            <span>Overview</span>
+        </a>
+        <a href="map.html" class="nav-item">
+            <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            <span>Peta<span class="hide-sm"> Interaktif</span></span>
+        </a>
+        <a href="manage-data.html" class="nav-item active">
+            <svg class="icon-svg" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            <span>Data</span>
+        </a>
+    </nav>
+</header>
+
+<main class="page-wrap">
+    <div class="panel">
+        <div class="panel-header">
+            <div>
+                <h1 style="margin:0; font-size:16px; font-weight:700;">Manajemen Dokumen Cloud Firestore</h1>
+                <span style="font-size:12px; color:var(--text-muted);">Inspeksi dan penghapusan rekaman sel geospasial maupun log pengujian lapangan</span>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" data-col="waste_detections_v2">waste_detections_v2</button>
+                <button class="tab-btn" data-col="pengujian_deteksi">pengujian_deteksi</button>
+            </div>
         </div>
 
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th><input type="checkbox" id="selectAll"></th>
-                    <th>Waktu (WIB)</th>
-                    <th>Label</th>
-                    <th>Confidence</th>
-                    <th>Koordinat</th>
-                </tr>
-            </thead>
-            <tbody id="table-body">
-                </tbody>
-        </table>
+        <div class="controls-bar">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button id="deleteSelectedBtn" class="btn-danger">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    <span id="deleteBtnText">Hapus Terpilih</span>
+                </button>
+                <span id="recordCountInfo" style="font-size:12.5px; color:var(--text-muted); font-weight:600;">0 dokumen</span>
+            </div>
+            <div class="filter-inputs">
+                <input type="search" id="searchInput" placeholder="Filter cellKey / skenario...">
+                <select id="sortSelect">
+                    <option value="newest">Waktu Terbaru</option>
+                    <option value="oldest">Waktu Terlama</option>
+                    <option value="most_waste">Jumlah Objek Terbanyak</option>
+                    <option value="highest">Confidence / Akurasi Tertinggi</option>
+                    <option value="lowest">Confidence / Akurasi Terendah</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead id="table-head"></thead>
+                <tbody id="table-body"></tbody>
+            </table>
+        </div>
     </div>
+</main>
 
-    <script type="module">
-        import { db, collection, onSnapshot, deleteDoc, doc, parseFirestoreTimestamp } from './firebase-config.js';
+<script type="module">
+    import { db, collection, onSnapshot, deleteDoc, doc, parseDetectionDate, getEffectiveCount } from './firebase-config.js';
 
-        let allDetections = [];
-        const tableBody = document.getElementById('table-body');
+    let activeCollection = 'waste_detections_v2';
+    let wasteDetections = [];
+    let fieldTests = [];
 
-        // Fetch & Listen Real-Time
-        onSnapshot(collection(db, "waste_detections_v2"), (snapshot) => {
-            allDetections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            renderTable();
+    const tableHead = document.getElementById('table-head');
+    const tableBody = document.getElementById('table-body');
+    const recordCountInfo = document.getElementById('recordCountInfo');
+
+    onSnapshot(collection(db, "waste_detections_v2"), (snapshot) => {
+        wasteDetections = snapshot.docs.map(docSnap => {
+            const d = docSnap.data();
+            const parsedDate = parseDetectionDate(d);
+            return {
+                id: docSnap.id,
+                ...d,
+                cellKey: d.cellKey || docSnap.id,
+                effectiveCount: getEffectiveCount(d),
+                parsedDate,
+                epochMs: parsedDate ? parsedDate.getTime() : 0
+            };
         });
+        if (activeCollection === 'waste_detections_v2') renderTable();
+    });
 
-        function renderTable() {
-            const sortType = document.getElementById('sortSelect').value;
-            let sortedData = [...allDetections];
+    onSnapshot(collection(db, "pengujian_deteksi"), (snapshot) => {
+        fieldTests = snapshot.docs.map(docSnap => {
+            const d = docSnap.data();
+            const parsedDate = parseDetectionDate(d);
+            return {
+                id: docSnap.id,
+                ...d,
+                parsedDate,
+                epochMs: parsedDate ? parsedDate.getTime() : 0
+            };
+        });
+        if (activeCollection === 'pengujian_deteksi') renderTable();
+    });
 
-            sortedData.sort((a, b) => {
-                const timeA = parseFirestoreTimestamp(a.timestamp);
-                const timeB = parseFirestoreTimestamp(b.timestamp);
-                if (sortType === 'newest') return timeB - timeA;
-                if (sortType === 'oldest') return timeA - timeB;
+    function renderTable() {
+        const sortType = document.getElementById('sortSelect').value;
+        const query = document.getElementById('searchInput').value.trim().toLowerCase();
+
+        if (activeCollection === 'waste_detections_v2') {
+            tableHead.innerHTML = `
+                <tr>
+                    <th style="width:36px;"><input type="checkbox" id="selectAll"></th>
+                    <th>Waktu (WIB)</th>
+                    <th>Cell Key (~11m)</th>
+                    <th>Label</th>
+                    <th>Jumlah Objek</th>
+                    <th>Peak / Track Unik</th>
+                    <th>Confidence</th>
+                    <th>Koordinat (Lat, Lng)</th>
+                    <th>Altitude</th>
+                </tr>
+            `;
+
+            let list = wasteDetections.filter(d => {
+                if (!query) return true;
+                return (d.cellKey && d.cellKey.toLowerCase().includes(query)) ||
+                       (d.label && d.label.toLowerCase().includes(query));
+            });
+
+            list.sort((a, b) => {
+                if (sortType === 'newest') return b.epochMs - a.epochMs;
+                if (sortType === 'oldest') return a.epochMs - b.epochMs;
+                if (sortType === 'most_waste') return b.effectiveCount - a.effectiveCount;
                 if (sortType === 'highest') return (b.confidence || 0) - (a.confidence || 0);
                 if (sortType === 'lowest') return (a.confidence || 0) - (b.confidence || 0);
                 return 0;
             });
 
+            recordCountInfo.textContent = `${list.length} dokumen sel (${list.reduce((s, x) => s + x.effectiveCount, 0)} objek)`;
             tableBody.innerHTML = '';
-            sortedData.forEach(d => {
+
+            list.forEach(d => {
+                const timeStr = d.parsedDate
+                    ? d.parsedDate.toLocaleString('id-ID', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit'
+                      })
+                    : (d.timestamp || '-');
+                const sim = d.simultaneousPeak ?? d.effectiveCount;
+                const uniq = d.uniqueTrackCount ?? d.effectiveCount;
+
                 tableBody.innerHTML += `
                     <tr>
                         <td><input type="checkbox" class="data-checkbox" value="${d.id}"></td>
-                        <td>${d.timestamp || '-'}</td>
-                        <td>${d.label || 'Unknown'}</td>
-                        <td>${d.confidence || 0}%</td>
-                        <td>${d.latitude ? d.latitude.toFixed(6) : '-'}, ${d.longitude ? d.longitude.toFixed(6) : '-'}</td>
+                        <td style="color:var(--text-secondary);">${timeStr}</td>
+                        <td class="mono" style="font-weight:600;">${d.cellKey}</td>
+                        <td>${d.label || 'rubbish'}</td>
+                        <td class="mono"><b>${d.effectiveCount}</b></td>
+                        <td class="mono">${sim} / ${uniq}</td>
+                        <td class="mono">${d.confidence ?? 0}%</td>
+                        <td class="mono">${d.latitude ? Number(d.latitude).toFixed(6) : '-'}, ${d.longitude ? Number(d.longitude).toFixed(6) : '-'}</td>
+                        <td class="mono">${d.altitude !== undefined ? Number(d.altitude).toFixed(1) + ' m' : '-'}</td>
                     </tr>
                 `;
             });
+        } else {
+            tableHead.innerHTML = `
+                <tr>
+                    <th style="width:36px;"><input type="checkbox" id="selectAll"></th>
+                    <th>Waktu Uji</th>
+                    <th>Skenario</th>
+                    <th>Cahaya / Latar</th>
+                    <th>Ground Truth</th>
+                    <th>Terdeteksi (Peak / ID)</th>
+                    <th>Akurasi</th>
+                    <th>Mean Conf</th>
+                    <th>Alt Target / Aktual</th>
+                    <th>Inferensi</th>
+                </tr>
+            `;
 
-            document.querySelectorAll('.data-checkbox').forEach(cb => 
-                cb.addEventListener('change', updateDeleteBtn)
-            );
-            updateDeleteBtn();
+            let list = fieldTests.filter(t => {
+                if (!query) return true;
+                return (t.skenario && t.skenario.toLowerCase().includes(query)) ||
+                       (t.kondisi_cahaya && t.kondisi_cahaya.toLowerCase().includes(query));
+            });
+
+            list.sort((a, b) => {
+                if (sortType === 'newest') return b.epochMs - a.epochMs;
+                if (sortType === 'oldest') return a.epochMs - b.epochMs;
+                if (sortType === 'most_waste') return (b.detected_count || 0) - (a.detected_count || 0);
+                if (sortType === 'highest') return (b.akurasi_persen || 0) - (a.akurasi_persen || 0);
+                if (sortType === 'lowest') return (a.akurasi_persen || 0) - (b.akurasi_persen || 0);
+                return 0;
+            });
+
+            recordCountInfo.textContent = `${list.length} dokumen sesi pengujian`;
+            tableBody.innerHTML = '';
+
+            list.forEach(t => {
+                const timeStr = t.parsedDate
+                    ? t.parsedDate.toLocaleString('id-ID', {
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      })
+                    : (t.timestamp || '-');
+
+                tableBody.innerHTML += `
+                    <tr>
+                        <td><input type="checkbox" class="data-checkbox" value="${t.id}"></td>
+                        <td style="color:var(--text-secondary);">${timeStr}</td>
+                        <td style="font-weight:600;">${t.skenario || '-'}</td>
+                        <td>${t.kondisi_cahaya || '-'}</td>
+                        <td class="mono"><b>${t.ground_truth_count ?? 0}</b></td>
+                        <td class="mono"><b>${t.detected_count ?? 0}</b> (${t.peak_simultaneous ?? '-'}/${t.unique_confirmed_tracks ?? '-'})</td>
+                        <td class="mono"><b>${t.akurasi_persen ?? 0}%</b></td>
+                        <td class="mono">${t.avg_confidence_persen ?? 0}%</td>
+                        <td class="mono">${t.ketinggian_m ?? '-'}m / ${t.ketinggian_aktual_m ?? '-'}m</td>
+                        <td class="mono">${t.mean_infer_ms ?? '-'} ms</td>
+                    </tr>
+                `;
+            });
         }
 
-        // Delete Logic
-        document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
-            const checked = document.querySelectorAll('.data-checkbox:checked');
-            if (checked.length === 0) return;
-            if (confirm(`Hapus ${checked.length} data?`)) {
-                const promises = Array.from(checked).map(cb => deleteDoc(doc(db, "waste_detections_v2", cb.value)));
-                await Promise.all(promises);
-                document.getElementById('selectAll').checked = false;
-            }
-        });
-
-        // UI Helpers
-        document.getElementById('sortSelect').addEventListener('change', renderTable);
-        document.getElementById('selectAll').addEventListener('change', (e) => {
-            document.querySelectorAll('.data-checkbox').forEach(cb => cb.checked = e.target.checked);
-            updateDeleteBtn();
-        });
-
-        function updateDeleteBtn() {
-            const count = document.querySelectorAll('.data-checkbox:checked').length;
-            document.getElementById('deleteSelectedBtn').style.display = count > 0 ? 'inline-block' : 'none';
+        const selectAllEl = document.getElementById('selectAll');
+        if (selectAllEl) {
+            selectAllEl.addEventListener('change', (e) => {
+                document.querySelectorAll('.data-checkbox').forEach(cb => cb.checked = e.target.checked);
+                updateDeleteBtn();
+            });
         }
-    </script>
+
+        document.querySelectorAll('.data-checkbox').forEach(cb =>
+            cb.addEventListener('change', updateDeleteBtn)
+        );
+        updateDeleteBtn();
+    }
+
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            activeCollection = this.getAttribute('data-col');
+            renderTable();
+        });
+    });
+
+    document.getElementById('deleteSelectedBtn').addEventListener('click', async () => {
+        const checked = document.querySelectorAll('.data-checkbox:checked');
+        if (checked.length === 0) return;
+        if (confirm(`Hapus ${checked.length} dokumen dari koleksi "${activeCollection}"?`)) {
+            const promises = Array.from(checked).map(cb => deleteDoc(doc(db, activeCollection, cb.value)));
+            await Promise.all(promises);
+        }
+    });
+
+    document.getElementById('sortSelect').addEventListener('change', renderTable);
+    document.getElementById('searchInput').addEventListener('input', renderTable);
+
+    function updateDeleteBtn() {
+        const count = document.querySelectorAll('.data-checkbox:checked').length;
+        const btn = document.getElementById('deleteSelectedBtn');
+        const txt = document.getElementById('deleteBtnText');
+        btn.style.display = count > 0 ? 'inline-flex' : 'none';
+        txt.textContent = `Hapus Terpilih (${count})`;
+    }
+</script>
 </body>
 </html>

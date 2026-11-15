@@ -1,111 +1,1963 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Heatmap Sampah dari Firebase</title>
+    <title>UAV Waste Detection System — Geospatial Portal & Live Analytics</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="/style.css">
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; overflow: hidden; }
-        #map { height: 100vh; width: 100vw; }
-        
-        #legend { position: absolute; bottom: 30px; left: 30px; background: rgba(255,255,255,0.95); color: #333; padding: 15px; border-radius: 4px; z-index: 999; box-shadow: 0 2px 6px rgba(0,0,0,0.3); width: 320px; }
-        .controls { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 999; display: flex; gap: 8px; }
-        .time-button { padding: 10px 14px; background: white; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; box-shadow: 0 2px 6px rgba(0,0,0,0.3); font-size: 13px; color: #565656; transition: background 0.2s; }
-        .time-button:hover { background: #f5f5f5; color: #222; }
-        .time-button.active { background: #3498db; color: white; }
-        .nav-links { position: absolute; top: 12px; right: 60px; z-index: 999; background: white; padding: 0 15px; border-radius: 4px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); height: 40px; display: flex; align-items: center; }
-        .nav-links a { text-decoration: none; color: #565656; font-weight: bold; font-size: 13px; }
-        .nav-links a:hover { color: #222; }
+        /* =========================================================
+           FULL-VIEWPORT SECTION SYSTEM (Pas 1 Layar Browser per Bagian)
+           ========================================================= */
+        .vp-section {
+            min-height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 56px 28px;
+            scroll-margin-top: 60px;
+            border-bottom: 1px solid var(--border-std);
+        }
+        .vp-section.bg-white {
+            background-color: var(--bg-surface);
+        }
+        .vp-section.bg-slate {
+            background-color: var(--bg-page);
+        }
+        .section-container {
+            max-width: 1360px;
+            width: 100%;
+            margin: 0 auto;
+        }
 
-        @media screen and (max-width: 768px) {
-            .controls {
-                top: 65px; 
-                left: 10px;
-                transform: none;
-                width: calc(100vw - 20px);
-                flex-wrap: wrap;
-                gap: 6px;
+        /* =========================================================
+           1. HERO SECTION (Full Viewport Split Landing + Live Radar)
+           ========================================================= */
+        .hero-section {
+            min-height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            background-color: var(--bg-dark);
+            background-image:
+                radial-gradient(circle at 15% 20%, rgba(37, 99, 235, 0.2), transparent 42%),
+                radial-gradient(circle at 85% 80%, rgba(22, 163, 74, 0.14), transparent 42%),
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+            color: #f8fafc;
+            padding: 48px 28px;
+            border-bottom: 1px solid #1e293b;
+            position: relative;
+        }
+        .hero-inner {
+            max-width: 1360px;
+            width: 100%;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: 1.05fr 1.15fr;
+            gap: 48px;
+            align-items: center;
+        }
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            color: #34d399;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .pulse-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #10b981;
+            box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+            animation: pulseRing 2s infinite;
+        }
+        @keyframes pulseRing {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        .hero-title {
+            font-size: 40px;
+            font-weight: 800;
+            line-height: 1.16;
+            letter-spacing: -0.8px;
+            margin: 0 0 18px 0;
+            color: #ffffff;
+        }
+        .hero-title span {
+            color: #60a5fa;
+        }
+        .hero-desc {
+            font-size: 15.5px;
+            line-height: 1.65;
+            color: #94a3b8;
+            margin: 0 0 28px 0;
+            max-width: 590px;
+        }
+
+        .hero-stats-strip {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-bottom: 30px;
+            max-width: 580px;
+        }
+        .hero-stat-box {
+            background: rgba(17, 24, 39, 0.78);
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: var(--radius-md);
+            padding: 14px 16px;
+        }
+        .hero-stat-box .val {
+            font-family: var(--font-mono);
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.1;
+        }
+        .hero-stat-box .lbl {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 5px;
+            font-weight: 500;
+        }
+
+        .hero-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .btn-hero-primary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #2563eb;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 13px 22px;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            font-size: 14px;
+            box-shadow: 0 4px 16px rgba(37, 99, 235, 0.35);
+            transition: transform 0.15s ease, background 0.15s ease;
+        }
+        .btn-hero-primary:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        .btn-hero-secondary {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.06);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            text-decoration: none;
+            padding: 13px 20px;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 14px;
+            transition: background 0.15s ease;
+        }
+        .btn-hero-secondary:hover {
+            background: rgba(255, 255, 255, 0.12);
+        }
+
+        /* Hero Right: Interactive Live Map Showcase */
+        .hero-map-card {
+            background: #111827;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.55);
+            position: relative;
+        }
+        .hero-map-topbar {
+            background: rgba(15, 23, 42, 0.95);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .hero-map-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+        .hero-map-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .map-ctrl-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #f8fafc;
+            border-radius: 6px;
+            padding: 6px 11px;
+            font-size: 11.5px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: background 0.15s;
+        }
+        .map-ctrl-btn:hover {
+            background: rgba(255, 255, 255, 0.16);
+        }
+        #minimap-container {
+            width: 100%;
+            height: 420px;
+            background: #0f172a;
+        }
+        .hero-map-overlay {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            right: 14px;
+            background: rgba(15, 23, 42, 0.92);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            border-radius: var(--radius-md);
+            padding: 11px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .overlay-cell-info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .overlay-badge {
+            background: #2563eb;
+            color: #ffffff;
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 12px;
+            padding: 4px 9px;
+            border-radius: 6px;
+        }
+        .overlay-meta-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .overlay-meta-sub {
+            font-size: 11.5px;
+            color: #94a3b8;
+            font-family: var(--font-mono);
+        }
+
+        /* =========================================================
+           SECTION HEADERS
+           ========================================================= */
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .section-eyebrow {
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
+        .section-title {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+        .section-desc {
+            margin: 6px 0 0 0;
+            font-size: 14.5px;
+            color: var(--text-muted);
+            max-width: 680px;
+        }
+
+        /* =========================================================
+           2. INTERACTIVE VISUAL STORYTELLING ("Cara Kerja Sistem")
+           ========================================================= */
+        .story-grid {
+            display: grid;
+            grid-template-columns: 0.92fr 1.08fr;
+            gap: 28px;
+            align-items: stretch;
+        }
+        .story-steps {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            justify-content: space-between;
+        }
+        .story-step-btn {
+            text-align: left;
+            background: var(--bg-page);
+            border: 1.5px solid var(--border-std);
+            border-radius: var(--radius-lg);
+            padding: 18px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            position: relative;
+            overflow: hidden;
+        }
+        .story-step-btn:hover {
+            border-color: var(--border-strong);
+            background: #ffffff;
+        }
+        .story-step-btn.active {
+            background: #ffffff;
+            border-color: var(--primary);
+            box-shadow: 0 8px 24px -4px rgba(37, 99, 235, 0.12);
+        }
+        .story-step-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 9px;
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-mono);
+            font-weight: 800;
+            font-size: 14px;
+            flex-shrink: 0;
+            transition: all 0.2s;
+        }
+        .story-step-btn.active .story-step-icon {
+            background: var(--primary);
+            color: #ffffff;
+        }
+        .story-step-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin: 0 0 4px 0;
+        }
+        .story-step-desc {
+            font-size: 13px;
+            line-height: 1.5;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        /* Interactive Visual Stage (Right Side of Cara Kerja) */
+        .story-stage-card {
+            background: #0f172a;
+            border-radius: var(--radius-lg);
+            border: 1px solid #1e293b;
+            padding: 24px 28px;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.25);
+            min-height: 470px;
+        }
+        .stage-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .stage-badge {
+            font-family: var(--font-mono);
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #60a5fa;
+            background: rgba(37, 99, 235, 0.18);
+            border: 1px solid rgba(96, 165, 250, 0.3);
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+        .stage-controls {
+            display: flex;
+            gap: 8px;
+        }
+        .stage-ctrl-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #e2e8f0;
+            padding: 5px 11px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .stage-ctrl-btn:hover { background: rgba(255, 255, 255, 0.16); }
+        .stage-ctrl-btn.playing {
+            background: rgba(16, 185, 129, 0.2);
+            border-color: rgba(16, 185, 129, 0.45);
+            color: #34d399;
+        }
+
+        /* Visual Graphic Canvas inside Stage */
+        .stage-visual-canvas {
+            background: #090d16;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: var(--radius-md);
+            height: 230px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        /* Animated Visuals for Steps 1-4 */
+        @keyframes scanBeam {
+            0%, 100% { transform: translateY(-45px); opacity: 0.4; }
+            50% { transform: translateY(45px); opacity: 0.85; }
+        }
+        @keyframes floatPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.06); }
+        }
+        .sim-box-detect {
+            border: 2px solid #ef4444;
+            background: rgba(239, 68, 68, 0.14);
+            border-radius: 6px;
+            position: absolute;
+            animation: floatPulse 2.2s infinite ease-in-out;
+        }
+        .sim-box-label {
+            position: absolute;
+            top: -20px;
+            left: -2px;
+            background: #ef4444;
+            color: #ffffff;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 700;
+            padding: 1px 6px;
+            border-radius: 3px;
+            white-space: nowrap;
+        }
+        .sim-box-track {
+            border: 2px solid #38bdf8;
+            background: rgba(56, 189, 248, 0.14);
+            border-radius: 6px;
+            position: absolute;
+        }
+        .sim-box-track .sim-box-label {
+            background: #0284c7;
+        }
+
+        .stage-explanation h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 700;
+            color: #ffffff;
+        }
+        .stage-explanation p {
+            margin: 0 0 16px 0;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: #cbd5e1;
+        }
+        .stage-takeaway-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        .stage-pill {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 10px 12px;
+        }
+        .stage-pill .pk {
+            font-size: 10.5px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+        .stage-pill .pv {
+            font-size: 13px;
+            font-weight: 700;
+            color: #f8fafc;
+        }
+
+        /* =========================================================
+           3. MONITORING KPI, CHARTS & HOTSPOT RANKING
+           ========================================================= */
+        .toolbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .segmented-filter {
+            display: inline-flex;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-std);
+            border-radius: var(--radius-md);
+            padding: 4px;
+            box-shadow: var(--shadow-sm);
+        }
+        .stat-filter-btn {
+            border: none;
+            background: transparent;
+            padding: 6px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 12.5px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .stat-filter-btn:hover { color: var(--text-main); }
+        .stat-filter-btn.active {
+            background: var(--text-main);
+            color: #ffffff;
+        }
+        .btn-outline {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-std);
+            padding: 7px 13px;
+            border-radius: var(--radius-sm);
+            font-size: 12.5px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+            transition: all 0.15s;
+            text-decoration: none;
+        }
+        .btn-outline:hover {
+            background: var(--bg-subtle);
+            border-color: var(--border-strong);
+            color: var(--text-main);
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 22px;
+        }
+        .kpi-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-std);
+            border-radius: var(--radius-lg);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+        .kpi-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .kpi-icon-box {
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .kpi-value {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--text-main);
+            line-height: 1.1;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.5px;
+        }
+        .kpi-bar-track {
+            width: 100%;
+            height: 4px;
+            background: var(--bg-subtle);
+            border-radius: 999px;
+            margin: 12px 0 8px;
+            overflow: hidden;
+        }
+        .kpi-bar-fill {
+            height: 100%;
+            background: var(--primary);
+            border-radius: 999px;
+            width: 0%;
+            transition: width 0.6s ease;
+        }
+        .kpi-meta {
+            font-size: 11.5px;
+            color: var(--text-muted);
+            font-variant-numeric: tabular-nums;
+        }
+
+        .grid-charts {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+            margin-bottom: 22px;
+        }
+        .panel {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-std);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .panel-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-std);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .panel-title {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .panel-subtitle {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        .panel-body {
+            padding: 18px 20px;
+            flex: 1;
+        }
+        .chart-box {
+            position: relative;
+            height: 270px;
+            width: 100%;
+        }
+
+        /* Tables */
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .tech-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            font-variant-numeric: tabular-nums;
+        }
+        .tech-table th, .tech-table td {
+            padding: 11px 14px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-std);
+            white-space: nowrap;
+        }
+        .tech-table th {
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 11.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        .tech-table tbody tr {
+            transition: background 0.12s;
+        }
+        .tech-table tbody tr:hover {
+            background: #f1f5f9;
+        }
+        .tech-table tbody tr.active-row {
+            background: var(--primary-subtle);
+        }
+
+        .status-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: var(--font-mono);
+        }
+        .tag-neutral { background: var(--bg-subtle); color: var(--text-secondary); border: 1px solid var(--border-std); }
+        .tag-good { background: #dcfce7; color: #166534; }
+        .tag-warn { background: #fef3c7; color: #92400e; }
+        .tag-low { background: #fee2e2; color: #991b1b; }
+
+        .acc-cell {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .acc-mini-track {
+            width: 54px;
+            height: 6px;
+            background: var(--bg-subtle);
+            border-radius: 999px;
+            overflow: hidden;
+        }
+        .acc-mini-fill {
+            height: 100%;
+            border-radius: 999px;
+        }
+
+        footer {
+            background: var(--bg-dark);
+            color: #94a3b8;
+            padding: 32px 28px;
+            text-align: center;
+            font-size: 13px;
+        }
+
+        @media screen and (max-width: 1080px) {
+            .vp-section, .hero-section { min-height: auto; padding: 48px 20px; }
+            .hero-inner { grid-template-columns: 1fr; }
+            .story-grid { grid-template-columns: 1fr; }
+            .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-charts { grid-template-columns: 1fr; }
+        }
+        @media screen and (max-width: 640px) {
+            .vp-section, .hero-section { padding: 32px 14px; }
+            .hero-title { font-size: 26px; }
+            .hero-desc { font-size: 14px; }
+            .hero-stats-strip { grid-template-columns: 1fr; gap: 10px; }
+            .hero-actions { width: 100%; }
+            .btn-hero-primary, .btn-hero-secondary { width: 100%; justify-content: center; }
+            #minimap-container { height: 280px; }
+            .hero-map-overlay {
+                position: relative;
+                bottom: auto;
+                left: auto;
+                right: auto;
+                border-radius: 0;
+                border: none;
+                border-top: 1px solid rgba(148, 163, 184, 0.2);
+                padding: 12px 14px;
             }
-            .time-button {
-                flex: 1 1 40%;
-                text-align: center;
-                font-size: 12px;
-                padding: 8px;
-            }
-            .nav-links {
-                top: 10px;
-                right: 55px; 
-                height: 36px;
-                padding: 0 12px;
-            }
-            #legend {
-                width: 200px !important; 
-                left: 10px !important;
-                bottom: 25px !important;
-                padding: 8px 10px !important;
-                border-radius: 6px !important;
-            }
-            #legend h4 {
-                font-size: 12px !important;
-                margin-bottom: 6px !important;
-            }
-            #legend > div:nth-of-type(1) { 
-                font-size: 8px !important; 
-                margin-bottom: 3px !important;
-            }
-            #legend > div:nth-of-type(2) { 
-                height: 10px !important;
-            }
-            #legend > div:nth-of-type(3) { 
-                font-size: 9px !important;
-                margin-top: 4px !important;
-            }
+            .section-title { font-size: 21px; }
+            .story-stage-card { padding: 16px; min-height: auto; }
+            .stage-visual-canvas { height: 200px; }
+            .stage-takeaway-grid { grid-template-columns: 1fr; }
+            .toolbar-actions { width: 100%; }
+            .segmented-filter { width: 100%; display: flex; }
+            .stat-filter-btn { flex: 1; text-align: center; padding: 6px 4px; font-size: 11.5px; }
+            .btn-outline { flex: 1; justify-content: center; }
+            .kpi-grid { grid-template-columns: 1fr; gap: 12px; }
+            .hide-mobile { display: none; }
         }
     </style>
 </head>
 <body>
-    <div class="nav-links">
-        <a href="statistics.html">Statistics</a>
-    </div>
 
-    <div class="controls">
-        <button class="time-button active" data-filter="all">Semua Waktu</button>
-        <button class="time-button" data-filter="today">Hari Ini</button>
-        <button class="time-button" data-filter="week">Minggu Ini</button>
-        <button class="time-button" data-filter="month">Bulan Ini</button>
-    </div>
+<!-- Sticky Top Navigation Bar -->
+<header class="topbar">
+    <a href="index.html" class="topbar-brand">
+        <span class="brand-mark">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        </span>
+        UAV Waste Detection
+        <span class="tag">v2.0 Edge-GIS</span>
+    </a>
+    <nav class="topbar-nav">
+        <a href="#cara-kerja" class="nav-item hide-mobile">Cara Kerja</a>
+        <a href="#monitoring" class="nav-item hide-mobile">Monitoring &amp; Statistik</a>
+        <a href="#evaluasi-uji" class="nav-item hide-mobile">Hasil Uji</a>
+        <a href="map.html" class="nav-item active">
+            <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            Buka Peta Penuh
+        </a>
+        <a href="manage-data.html" class="nav-item">
+            <svg class="icon-svg" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            Data
+        </a>
+    </nav>
+</header>
 
-    <div id="legend">
-        <h4 style="margin-top:0; margin-bottom:12px; text-align:center; font-size:14px;">Estimasi Volume Sampah</h4>
-        <div style="display: flex; justify-content: space-between; font-size: 11px; font-weight: bold; margin-bottom: 4px; color: #555;">
-            <span style="flex: 1; text-align: center;">Sedikit</span>
-            <span style="flex: 1; text-align: center;">Sedang</span>
-            <span style="flex: 1; text-align: center;">Banyak</span>
-            <span style="flex: 1; text-align: center;">Sangat Byk</span>
+<!-- =========================================================
+     SECTION 1 (FULL VIEWPORT): HERO & LIVE MINIMAP OVERVIEW
+     ========================================================= -->
+<section class="hero-section">
+    <div class="hero-inner">
+        <div>
+            <div class="hero-badge">
+                <span class="pulse-indicator"></span>
+                <span>Terhubung Real-Time ke Cloud Firestore</span>
+            </div>
+            <h1 class="hero-title">
+                Deteksi Otomatis &amp; Pemetaan Titik Sampah Berbasis <span>Drone AI</span>
+            </h1>
+            <p class="hero-desc">
+                Sistem pemantauan udara yang mendeteksi keberadaan sampah secara otomatis dari kamera drone, menghitung jumlah tumpukan tanpa duplikasi, dan memetakannya menjadi peta kepadatan interaktif untuk mempercepat penanganan kebersihan di lapangan.
+            </p>
+
+            <div class="hero-stats-strip">
+                <div class="hero-stat-box">
+                    <div class="val" id="hero-val-waste">0</div>
+                    <div class="lbl">Total Sampah Terdeteksi</div>
+                </div>
+                <div class="hero-stat-box">
+                    <div class="val" id="hero-val-cells">0</div>
+                    <div class="lbl">Titik Lokasi (~11&times;11m)</div>
+                </div>
+                <div class="hero-stat-box">
+                    <div class="val" id="hero-val-acc">--%</div>
+                    <div class="lbl">Rata-rata Akurasi Uji</div>
+                </div>
+            </div>
+
+            <div class="hero-actions">
+                <a href="map.html" class="btn-hero-primary">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+                    Eksplorasi Peta Sebaran Penuh
+                </a>
+                <a href="#cara-kerja" class="btn-hero-secondary">
+                    Pelajari Cara Kerja &darr;
+                </a>
+            </div>
         </div>
-        <div style="position: relative; width: 100%; height: 18px; background: linear-gradient(to right, #00FF00, #FFFF00, #FFA500, #FF0000); border-radius: 4px; border: 1px solid #ccc;">
-            <div style="position: absolute; left: 25%; top: 0; bottom: 0; border-left: 2px solid white;"></div>
-            <div style="position: absolute; left: 50%; top: 0; bottom: 0; border-left: 2px solid white;"></div>
-            <div style="position: absolute; left: 75%; top: 0; bottom: 0; border-left: 2px solid white;"></div>
-        </div>
-        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-top: 5px; color: #222;">
-            <span style="flex: 1; text-align: center;">1-10</span>
-            <span style="flex: 1; text-align: center;">11-25</span>
-            <span style="flex: 1; text-align: center;">26-40</span>
-            <span style="flex: 1; text-align: center;">41-50+</span>
+
+        <!-- Right: Interactive Minimap Overview -->
+        <div class="hero-map-card">
+            <div class="hero-map-topbar">
+                <div class="hero-map-title">
+                    <svg class="icon-svg" viewBox="0 0 24 24" style="color:#60a5fa;"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+                    <span>Live Minimap Overview</span>
+                </div>
+                <div class="hero-map-controls">
+                    <button type="button" id="btnPrevHotspot" class="map-ctrl-btn" title="Titik Sebelumnya">
+                        &larr; Prev
+                    </button>
+                    <button type="button" id="btnNextHotspot" class="map-ctrl-btn" title="Lompat ke Titik Tumpukan Berikutnya">
+                        Titik Terpadat Berikutnya &rarr;
+                    </button>
+                    <button type="button" id="btnResetMinimap" class="map-ctrl-btn" title="Tampilkan Semua Area">
+                        Semua Area
+                    </button>
+                </div>
+            </div>
+
+            <div id="minimap-container"></div>
+
+            <div class="hero-map-overlay">
+                <div class="overlay-cell-info">
+                    <span class="overlay-badge" id="ov-rank">AREA</span>
+                    <div>
+                        <div class="overlay-meta-title" id="ov-title">Menampilkan Seluruh Sebaran Deteksi</div>
+                        <div class="overlay-meta-sub" id="ov-sub">Klik "Titik Terpadat Berikutnya" untuk meninjau lokasi tumpukan tertinggi</div>
+                    </div>
+                </div>
+                <a href="map.html" class="map-ctrl-btn" style="text-decoration:none; background:#2563eb; border-color:#3b82f6;">
+                    Layar Penuh &nearr;
+                </a>
+            </div>
         </div>
     </div>
+</section>
 
-    <div id="map"></div>
+<!-- =========================================================
+     SECTION 2 (FULL VIEWPORT): CARA KERJA SISTEM (VISUAL & MUDAH DIPAHAMI)
+     ========================================================= -->
+<section id="cara-kerja" class="vp-section bg-white">
+    <div class="section-container">
+        <div class="section-head">
+            <div>
+                <div class="section-eyebrow">Alur Kerja Sistem</div>
+                <h2 class="section-title">Bagaimana Sistem Mendeteksi &amp; Memetakan Sampah?</h2>
+                <p class="section-desc">Dari pemindaian kamera drone di udara hingga menjadi peta titik prioritas kebersihan dalam 4 langkah otomatis.</p>
+            </div>
+        </div>
 
-    <script style="display:none;">
-        window.googleMapsBridgeCallback = function() {
-            if (window.jalankanInisialisasiPeta) { window.jalankanInisialisasiPeta(); } 
-            else { window.googleMapsScriptSudahSiap = true; }
-        };
-    </script>
-    <script type="module" src="/app.js"></script>
-    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDaN7fGUo5I4rDQNhNS5uJA97CJp5gh_Qw&v=3.64&libraries=visualization&callback=googleMapsBridgeCallback"></script>
+        <div class="story-grid">
+            <!-- Left: 4 Clear, Human-Friendly Steps -->
+            <div class="story-steps" role="tablist">
+                <button type="button" class="story-step-btn active" data-step="0">
+                    <span class="story-step-icon">01</span>
+                    <div>
+                        <h3 class="story-step-title">Pemindaian Udara dengan Drone</h3>
+                        <p class="story-step-desc">Drone terbang di atas area target dengan kamera menghadap ke bawah sambil mencatat titik koordinat GPS dan ketinggian secara otomatis.</p>
+                    </div>
+                </button>
+
+                <button type="button" class="story-step-btn" data-step="1">
+                    <span class="story-step-icon">02</span>
+                    <div>
+                        <h3 class="story-step-title">Pengenalan Sampah Otomatis oleh AI</h3>
+                        <p class="story-step-desc">Gambar video langsung dianalisis oleh kecerdasan buatan (AI) di ponsel pengendali untuk mengenali objek sampah secara instan.</p>
+                    </div>
+                </button>
+
+                <button type="button" class="story-step-btn" data-step="2">
+                    <span class="story-step-icon">03</span>
+                    <div>
+                        <h3 class="story-step-title">Penguncian Objek (Anti-Hitung Ganda)</h3>
+                        <p class="story-step-desc">Setiap sampah yang terdeteksi diberi nomor identitas unik sehingga objek yang sama tidak dihitung berulang kali saat kamera bergerak.</p>
+                    </div>
+                </button>
+
+                <button type="button" class="story-step-btn" data-step="3">
+                    <span class="story-step-icon">04</span>
+                    <div>
+                        <h3 class="story-step-title">Pemetaan Kepadatan &amp; Titik Prioritas</h3>
+                        <p class="story-step-desc">Data dikirim ke cloud dan ditampilkan sebagai peta warna (Hijau hingga Merah) agar petugas tahu lokasi tumpukan terpadat.</p>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Right: Interactive Visual Simulator Card -->
+            <div class="story-stage-card">
+                <div class="stage-topbar">
+                    <span class="stage-badge" id="stage-badge-text">TAHAP 01 DARI 04</span>
+                    <div class="stage-controls">
+                        <button type="button" id="btnAutoPlayStory" class="stage-ctrl-btn playing">
+                            Putar Otomatis: Aktif
+                        </button>
+                        <button type="button" id="btnNextStoryStep" class="stage-ctrl-btn">
+                            Tahap Berikutnya &rarr;
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Dynamic Visual Illustration Container -->
+                <div class="stage-visual-canvas" id="stage-visual-canvas">
+                    <!-- Diisi ilustrasi SVG/HTML interaktif oleh JS -->
+                </div>
+
+                <div class="stage-explanation">
+                    <h3 id="stage-title-text">Pemindaian Udara &amp; Perekaman Lokasi GPS</h3>
+                    <p id="stage-desc-text">
+                        Kamera drone diarahkan tegak lurus ke permukaan tanah (sudut nadir -90&deg;) agar posisi sampah di layar sesuai dengan titik koordinat GPS tepat di bawah drone.
+                    </p>
+                    <div class="stage-takeaway-grid" id="stage-pills-container">
+                        <!-- Diisi ringkasan poin oleh JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =========================================================
+     SECTION 3 (FULL VIEWPORT): MONITORING STATISTIK & GRAFIK TREN
+     ========================================================= -->
+<section id="monitoring" class="vp-section bg-slate">
+    <div class="section-container">
+        <div class="section-head">
+            <div>
+                <div class="section-eyebrow">Monitoring &amp; Statistik Spasial</div>
+                <h2 class="section-title">Ringkasan Data, Tren Harian &amp; Lokasi Prioritas</h2>
+                <p class="section-desc">Pilih rentang waktu di kanan atas untuk menyaring data statistik dan grafik secara langsung.</p>
+            </div>
+            <div class="toolbar-actions">
+                <div class="segmented-filter" role="group" aria-label="Filter Periode">
+                    <button class="stat-filter-btn active" data-filter="all">Semua Waktu</button>
+                    <button class="stat-filter-btn" data-filter="today">Hari Ini</button>
+                    <button class="stat-filter-btn" data-filter="week">Minggu Ini</button>
+                    <button class="stat-filter-btn" data-filter="month">Bulan Ini</button>
+                </div>
+                <button id="btnExportDetections" class="btn-outline">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Unduh CSV Deteksi
+                </button>
+            </div>
+        </div>
+
+        <!-- 4 KPI Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card">
+                <div class="kpi-label">
+                    <span>Total Volume Sampah</span>
+                    <span class="kpi-icon-box">
+                        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                    </span>
+                </div>
+                <div class="kpi-value" id="val-total">0</div>
+                <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar-total" style="width:100%;"></div></div>
+                <div class="kpi-meta" id="sub-total-cells">0 titik lokasi (~11x11m) · ~0.00 kg</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-label">
+                    <span>Rata-rata Sampah per Lokasi</span>
+                    <span class="kpi-icon-box">
+                        <svg class="icon-svg" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    </span>
+                </div>
+                <div class="kpi-value" id="val-avg-loc">0.0</div>
+                <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar-density" style="background:#16a34a;"></div></div>
+                <div class="kpi-meta">Kepadatan rata-rata tiap petak ~11m</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-label">
+                    <span>Tingkat Keyakinan AI (Confidence)</span>
+                    <span class="kpi-icon-box">
+                        <svg class="icon-svg" viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    </span>
+                </div>
+                <div class="kpi-value" id="val-avg-conf">0%</div>
+                <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar-conf" style="background:#d97706;"></div></div>
+                <div class="kpi-meta" id="sub-track-breakdown">Puncak simultan: 0 · Objek unik: 0</div>
+            </div>
+
+            <div class="kpi-card">
+                <div class="kpi-label">
+                    <span>Jam Puncak Temuan</span>
+                    <span class="kpi-icon-box">
+                        <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    </span>
+                </div>
+                <div class="kpi-value" id="val-peak">--:--</div>
+                <div class="kpi-bar-track"><div class="kpi-bar-fill" id="bar-peak" style="background:#0f172a;"></div></div>
+                <div class="kpi-meta" id="sub-peak-count">Distribusi waktu pemantauan 24 jam</div>
+            </div>
+        </div>
+
+        <!-- Charts Row -->
+        <div class="grid-charts">
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h3 class="panel-title">Tren Jumlah Sampah Terdeteksi per Hari</h3>
+                        <div class="panel-subtitle">Arahkan kursor pada titik grafik untuk melihat rincian jam dan lokasi</div>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="chart-box">
+                        <canvas id="dailyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-header">
+                    <div>
+                        <h3 class="panel-title">Distribusi Jam Pemantauan (24 Jam)</h3>
+                        <div class="panel-subtitle">Akumulasi volume sampah berdasarkan jam operasional</div>
+                    </div>
+                </div>
+                <div class="panel-body">
+                    <div class="chart-box">
+                        <canvas id="hourlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Priority Hotspot Explorer Table -->
+        <div class="panel">
+            <div class="panel-header">
+                <div>
+                    <h3 class="panel-title">Daftar Lokasi Prioritas (Titik Tumpukan Tertinggi)</h3>
+                    <div class="panel-subtitle">Klik baris lokasi untuk melihat titik tersebut pada Minimap, atau klik "Rute Maps" untuk navigasi lapangan</div>
+                </div>
+                <a href="map.html" class="btn-outline">Buka Peta Interaktif Penuh &rarr;</a>
+            </div>
+            <div class="table-wrap">
+                <table class="tech-table">
+                    <thead>
+                        <tr>
+                            <th>Peringkat</th>
+                            <th>ID Lokasi (~11m)</th>
+                            <th>Volume Sampah</th>
+                            <th>Puncak Frame / ID Unik</th>
+                            <th>Keyakinan AI</th>
+                            <th>Ketinggian Drone</th>
+                            <th>Waktu Terakhir</th>
+                            <th>Navigasi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="hotspot-table-body">
+                        <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Memuat data titik prioritas...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- =========================================================
+     SECTION 4 (FULL VIEWPORT): HASIL PENGUJIAN LAPANGAN
+     ========================================================= -->
+<section id="evaluasi-uji" class="vp-section bg-white" style="border-bottom:none;">
+    <div class="section-container">
+        <div class="section-head">
+            <div>
+                <div class="section-eyebrow">Validasi Akurasi Sistem</div>
+                <h2 class="section-title">Hasil Pengujian Lapangan (Koleksi <code>pengujian_deteksi</code>)</h2>
+                <p class="section-desc">Perbandingan antara jumlah sampah sebenarnya di lapangan (Ground Truth) dengan hasil hitungan otomatis drone pada berbagai ketinggian dan kondisi cahaya.</p>
+            </div>
+            <div class="toolbar-actions">
+                <span id="field-test-summary-badge" class="status-tag tag-neutral">Memuat log uji...</span>
+                <button id="btnExportFieldTests" class="btn-outline">
+                    <svg class="icon-svg" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    Unduh CSV Uji Lapangan
+                </button>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-body">
+                <div id="field-test-chart-wrapper" style="display:none; margin-bottom:24px; padding-bottom:20px; border-bottom:1px solid var(--border-std);">
+                    <div class="chart-box" style="height:280px;">
+                        <canvas id="fieldTestChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="table-wrap">
+                    <table class="tech-table">
+                        <thead>
+                            <tr>
+                                <th>Waktu Uji</th>
+                                <th>Skenario Pengujian</th>
+                                <th>Kondisi Cahaya / Latar</th>
+                                <th>Ketinggian Target / Aktual</th>
+                                <th>Kecepatan Maks / Rata</th>
+                                <th>Jumlah Asli (Ground Truth)</th>
+                                <th>Terdeteksi (Peak / ID)</th>
+                                <th>Selisih</th>
+                                <th>Akurasi</th>
+                                <th>Rata-rata Conf</th>
+                                <th>Waktu Proses AI</th>
+                                <th>Frame Drop</th>
+                            </tr>
+                        </thead>
+                        <tbody id="field-test-table-body">
+                            <tr><td colspan="12" style="text-align:center; color:var(--text-muted);">Memuat data pengujian_deteksi...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<footer>
+    <b>UAV Waste Detection System</b> — Sistem Pemantauan dan Pemetaan Titik Sampah Otomatis Berbasis Drone &amp; Computer Vision.<br>
+    Terintegrasi secara real-time dengan Cloud Firestore dan Google Maps API.
+</footer>
+
+<script>
+    window.initMinimap = function() {
+        window.googleMapsReady = true;
+        if (window.renderMinimap) window.renderMinimap();
+    };
+</script>
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDaN7fGUo5I4rDQNhNS5uJA97CJp5gh_Qw&v=3.64&libraries=visualization&callback=initMinimap"></script>
+
+<script type="module">
+    import { db, collection, onSnapshot, parseDetectionDate, getEffectiveCount } from './firebase-config.js';
+
+    let allDetections = [];
+    let filteredDetections = [];
+    let topHotspots = [];
+    let activeHotspotIdx = -1;
+    let fieldTests = [];
+    let currentFilter = 'all';
+    let charts = {};
+    let map, heatmapLayer;
+    let minimapMarkers = [];
+
+    /* =========================================================
+       INTERACTIVE VISUAL STORYTELLING ("Cara Kerja Sistem")
+       ========================================================= */
+    const STORY_STAGES = [
+        {
+            badge: "TAHAP 01 DARI 04 · PEMINDAIAN UDARA",
+            title: "1. Drone Memindai Area & Mencatat Titik Koordinat GPS",
+            desc: "Drone terbang di atas lokasi yang dipantau dengan kamera menghadap tegak lurus ke bawah (sudut 90 derajat). Selama terbang, sistem secara otomatis membaca posisi koordinat GPS dan ketinggian drone agar setiap temuan sampah memiliki titik lokasi yang presisi.",
+            pills: [
+                { k: "Arah Kamera", v: "Tegak Lurus ke Bawah" },
+                { k: "Ketinggian Efektif", v: "5 hingga 10 Meter" },
+                { k: "Data Lokasi", v: "Koordinat GPS Otomatis" }
+            ],
+            visualHtml: `
+                <div style="width:100%; height:100%; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                    <div style="background:#1e293b; border:1px solid #38bdf8; color:#38bdf8; font-family:var(--font-mono); font-size:11px; font-weight:700; padding:6px 14px; border-radius:999px; z-index:2; box-shadow:0 0 20px rgba(56,189,248,0.25);">
+                        DRONE · GPS: -6.9248, 107.7176 · ALT: 7.0m
+                    </div>
+                    <div style="width:220px; height:120px; border-left:2px dashed rgba(56,189,248,0.45); border-right:2px dashed rgba(56,189,248,0.45); border-bottom:2px solid #22c55e; background:linear-gradient(180deg, rgba(56,189,248,0.12) 0%, rgba(34,197,94,0.18) 100%); position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                        <div style="width:100%; height:3px; background:#38bdf8; box-shadow:0 0 12px #38bdf8; animation:scanBeam 2.4s infinite ease-in-out;"></div>
+                        <span style="position:absolute; bottom:6px; font-family:var(--font-mono); font-size:10px; color:#86efac; font-weight:600;">AREA PANDANG KAMERA (~11 x 11 Meter)</span>
+                    </div>
+                </div>
+            `
+        },
+        {
+            badge: "TAHAP 02 DARI 04 · DETEKSI AI REAL-TIME",
+            title: "2. AI Mengenali Objek Sampah Secara Instan di Layar",
+            desc: "Tanpa perlu menunggu proses unggah video selesai, kecerdasan buatan (YOLOv8n) langsung memeriksa gambar video di ponsel pengendali. Setiap sampah yang terlihat langsung ditandai dengan kotak merah beserta persentase tingkat keyakinannya.",
+            pills: [
+                { k: "Pemrosesan AI", v: "Langsung di Ponsel" },
+                { k: "Kecepatan Deteksi", v: "~4 Kali per Detik" },
+                { k: "Batas Keyakinan", v: "Minimal 40% - 50%" }
+            ],
+            visualHtml: `
+                <div style="width:90%; height:82%; border:1px solid #334155; border-radius:8px; position:relative; background:rgba(15,23,42,0.7);">
+                    <div style="position:absolute; top:8px; left:10px; font-family:var(--font-mono); font-size:10px; color:#94a3b8;">LIVE CAMERA FEED · AI ACTIVE</div>
+                    <div class="sim-box-detect" style="width:24%; max-width:72px; height:46px; top:30%; left:8%;">
+                        <span class="sim-box-label">Sampah 91%</span>
+                    </div>
+                    <div class="sim-box-detect" style="width:25%; max-width:76px; height:50px; top:54%; left:39%; animation-delay:0.4s;">
+                        <span class="sim-box-label">Sampah 84%</span>
+                    </div>
+                    <div class="sim-box-detect" style="width:23%; max-width:68px; height:44px; top:28%; right:7%; animation-delay:0.8s;">
+                        <span class="sim-box-label">Sampah 78%</span>
+                    </div>
+                </div>
+            `
+        },
+        {
+            badge: "TAHAP 03 DARI 04 · ANTI-HITUNG GANDA",
+            title: "3. Mengunci Identitas Objek agar Tidak Dihitung Berulang",
+            desc: "Saat drone terbang atau melayang, 1 botol sampah yang sama akan terekam di puluhan frame video berturut-turut. Sistem pelacak otomatis memberikan Nomor ID Unik pada setiap objek, sehingga 1 sampah yang sama tetap dihitung 1 kali, bukan dihitung berlipat ganda.",
+            pills: [
+                { k: "Masalah Umum", v: "1 Sampah Terekam Berulang" },
+                { k: "Solusi Sistem", v: "Penguncian Nomor ID Unik" },
+                { k: "Hasil Hitungan", v: "Akurat & Bebas Duplikasi" }
+            ],
+            visualHtml: `
+                <div style="width:90%; height:82%; border:1px solid #334155; border-radius:8px; position:relative; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:space-around; gap:6px; padding:0 10px;">
+                    <div class="sim-box-track" style="position:relative; width:74px; height:50px; flex-shrink:0;">
+                        <span class="sim-box-label">ID #01</span>
+                    </div>
+                    <div style="color:#94a3b8; font-family:var(--font-mono); font-size:10px; text-align:center; line-height:1.3;">
+                        Kamera Geser<br>&rarr; Tetap 1 ID &rarr;
+                    </div>
+                    <div class="sim-box-track" style="position:relative; width:74px; height:50px; flex-shrink:0; border-color:#22c55e; background:rgba(34,197,94,0.15);">
+                        <span class="sim-box-label" style="background:#16a34a;">Dihitung 1x</span>
+                    </div>
+                </div>
+            `
+        },
+        {
+            badge: "TAHAP 04 DARI 04 · PEMETAAN TITIK PRIORITAS",
+            title: "4. Pengelompokan Lokasi & Visualisasi Peta Heatmap",
+            desc: "Hasil hitungan sampah di setiap petak lokasi (~11x11 meter) langsung tersimpan di Cloud Firestore dan divisualisasikan pada peta web. Area dengan sedikit sampah berwarna Hijau, sedangkan tumpukan padat berwarna Merah sehingga tim kebersihan dapat langsung menuju lokasi prioritas.",
+            pills: [
+                { k: "Ukuran Petak Lokasi", v: "~11 x 11 Meter" },
+                { k: "Indikator Warna", v: "Hijau (Sedikit) -> Merah (Padat)" },
+                { k: "Fitur Lapangan", v: "Alamat Jalan & Rute Maps" }
+            ],
+            visualHtml: `
+                <div style="width:86%; height:80%; border:1px solid #334155; border-radius:8px; position:relative; background:radial-gradient(circle at 35% 55%, rgba(239,68,68,0.65) 0%, rgba(249,115,22,0.45) 28%, rgba(234,179,8,0.25) 52%, rgba(34,197,94,0.12) 75%, transparent 90%); display:flex; align-items:center; justify-content:center;">
+                    <div style="background:#0f172a; border:1.5px solid #ef4444; color:#ffffff; padding:8px 14px; border-radius:8px; font-family:var(--font-mono); font-size:11.5px; font-weight:700; box-shadow:0 8px 20px rgba(0,0,0,0.4);">
+                        TITIK PRIORITAS · 32 Sampah &rarr; Rute Maps
+                    </div>
+                </div>
+            `
+        }
+    ];
+
+    let currentStoryStep = 0;
+    let storyInterval = null;
+    let isStoryPlaying = true;
+
+    function renderStoryStage(idx) {
+        currentStoryStep = (idx + STORY_STAGES.length) % STORY_STAGES.length;
+        const s = STORY_STAGES[currentStoryStep];
+
+        document.querySelectorAll('.story-step-btn').forEach((btn, bIdx) => {
+            btn.classList.toggle('active', bIdx === currentStoryStep);
+        });
+
+        document.getElementById('stage-badge-text').textContent = s.badge;
+        document.getElementById('stage-title-text').textContent = s.title;
+        document.getElementById('stage-desc-text').textContent = s.desc;
+        document.getElementById('stage-visual-canvas').innerHTML = s.visualHtml;
+
+        document.getElementById('stage-pills-container').innerHTML = s.pills.map(p => `
+            <div class="stage-pill">
+                <div class="pk">${p.k}</div>
+                <div class="pv">${p.v}</div>
+            </div>
+        `).join('');
+    }
+
+    function startStoryAutoPlay() {
+        stopStoryAutoPlay();
+        storyInterval = setInterval(() => {
+            renderStoryStage(currentStoryStep + 1);
+        }, 5500);
+    }
+
+    function stopStoryAutoPlay() {
+        if (storyInterval) {
+            clearInterval(storyInterval);
+            storyInterval = null;
+        }
+    }
+
+    document.querySelectorAll('.story-step-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            renderStoryStage(Number(this.getAttribute('data-step')));
+            if (isStoryPlaying) startStoryAutoPlay();
+        });
+    });
+
+    document.getElementById('btnNextStoryStep').addEventListener('click', () => {
+        renderStoryStage(currentStoryStep + 1);
+        if (isStoryPlaying) startStoryAutoPlay();
+    });
+
+    document.getElementById('btnAutoPlayStory').addEventListener('click', function () {
+        isStoryPlaying = !isStoryPlaying;
+        this.classList.toggle('playing', isStoryPlaying);
+        this.textContent = isStoryPlaying ? "Putar Otomatis: Aktif" : "Putar Otomatis: Nonaktif";
+        if (isStoryPlaying) startStoryAutoPlay();
+        else stopStoryAutoPlay();
+    });
+
+    renderStoryStage(0);
+    startStoryAutoPlay();
+
+    /* =========================================================
+       SMOOTH NUMBER COUNTER HELPER
+       ========================================================= */
+    function animateNumber(elId, targetVal, suffix = "", decimals = 0) {
+        const el = document.getElementById(elId);
+        if (!el) return;
+        const duration = 450;
+        const startTime = performance.now();
+        const startVal = 0;
+
+        function tick(now) {
+            const progress = Math.min((now - startTime) / duration, 1);
+            const ease = 1 - Math.pow(1 - progress, 3);
+            const current = startVal + (targetVal - startVal) * ease;
+            el.textContent = decimals > 0
+                ? current.toFixed(decimals) + suffix
+                : Math.round(current).toLocaleString('id-ID') + suffix;
+            if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+    }
+
+    /* =========================================================
+       FIRESTORE REAL-TIME LISTENERS
+       ========================================================= */
+    onSnapshot(collection(db, "waste_detections_v2"), (snapshot) => {
+        allDetections = [];
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const lat = parseFloat(data.latitude);
+            const lng = parseFloat(data.longitude);
+            const timeObj = parseDetectionDate(data);
+
+            if (!isNaN(lat) && !isNaN(lng) && timeObj !== null) {
+                const jumlah = getEffectiveCount(data);
+                const simPeak = Number(data.simultaneousPeak) > 0 ? Number(data.simultaneousPeak) : jumlah;
+                const uniqueTracks = Number(data.uniqueTrackCount) > 0 ? Number(data.uniqueTrackCount) : jumlah;
+                const confRaw = Number(data.confidence);
+                const confPct = !isNaN(confRaw)
+                    ? (confRaw <= 1 && confRaw > 0 ? Math.round(confRaw * 100) : Math.round(confRaw))
+                    : 0;
+
+                allDetections.push({
+                    id: docSnap.id,
+                    cellKey: data.cellKey || docSnap.id,
+                    timestamp: timeObj,
+                    epochMs: timeObj.getTime(),
+                    lat,
+                    lng,
+                    altitude: Number(data.altitude) || 0,
+                    jumlah,
+                    simultaneousPeak: simPeak,
+                    uniqueTrackCount: uniqueTracks,
+                    confidencePct: confPct,
+                    label: data.label || 'rubbish'
+                });
+            }
+        });
+        applyStatFilterAndRender();
+    });
+
+    onSnapshot(collection(db, "pengujian_deteksi"), (snapshot) => {
+        fieldTests = [];
+        snapshot.forEach((docSnap) => {
+            const d = docSnap.data();
+            const timeObj = parseDetectionDate(d);
+            fieldTests.push({
+                id: docSnap.id,
+                ...d,
+                parsedTime: timeObj,
+                epochMs: timeObj ? timeObj.getTime() : 0
+            });
+        });
+        fieldTests.sort((a, b) => b.epochMs - a.epochMs);
+        renderFieldTestsSection();
+    });
+
+    function applyStatFilterAndRender() {
+        const now = new Date();
+        let startMs = 0;
+        let endMs = 8640000000000000;
+
+        if (currentFilter === 'today') {
+            startMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime();
+            endMs = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).getTime();
+        } else if (currentFilter === 'week') {
+            const day = now.getDay();
+            const diffToMonday = (day === 0 ? 6 : day - 1);
+            const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - diffToMonday, 0, 0, 0, 0);
+            const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6, 23, 59, 59, 999);
+            startMs = start.getTime();
+            endMs = end.getTime();
+        } else if (currentFilter === 'month') {
+            startMs = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
+            endMs = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+        }
+
+        filteredDetections = allDetections.filter(d => d.epochMs >= startMs && d.epochMs <= endMs);
+        processDataAndRender();
+    }
+
+    function toIsoDateKey(dateObj) {
+        const y = dateObj.getFullYear();
+        const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const d = String(dateObj.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    function processDataAndRender() {
+        const globalWaste = allDetections.reduce((s, d) => s + d.jumlah, 0);
+        animateNumber('hero-val-waste', globalWaste);
+        animateNumber('hero-val-cells', allDetections.length);
+
+        if (filteredDetections.length === 0) {
+            if (heatmapLayer) heatmapLayer.setData([]);
+            minimapMarkers.forEach(m => m.setMap(null));
+            minimapMarkers = [];
+            document.getElementById('val-total').textContent = "0";
+            document.getElementById('sub-total-cells').textContent = "0 titik lokasi aktif";
+            document.getElementById('val-avg-loc').textContent = "0.0";
+            document.getElementById('val-avg-conf').textContent = "0%";
+            document.getElementById('sub-track-breakdown').textContent = "Tidak ada data pada rentang ini";
+            document.getElementById('val-peak').textContent = "--:--";
+            document.getElementById('sub-peak-count').textContent = "0 objek pada jam puncak";
+            document.getElementById('hotspot-table-body').innerHTML = `
+                <tr><td colspan="8" style="text-align:center; color:var(--text-muted);">Tidak ada data deteksi pada periode waktu ini.</td></tr>
+            `;
+            renderCharts([], [], Array(24).fill(0), {}, Array(24).fill().map(() => []));
+            return;
+        }
+
+        const totalDeteksi = filteredDetections.reduce((sum, d) => sum + d.jumlah, 0);
+        const uniqueLocs = new Set(filteredDetections.map(d => d.cellKey || `${d.lat.toFixed(4)},${d.lng.toFixed(4)}`)).size;
+        const avgPerLoc = Number((totalDeteksi / Math.max(1, uniqueLocs)).toFixed(1));
+        const estMassKg = (totalDeteksi * 0.025).toFixed(2);
+
+        const weightedConfSum = filteredDetections.reduce((sum, d) => sum + (d.confidencePct * d.jumlah), 0);
+        const avgConf = Math.round(weightedConfSum / Math.max(1, totalDeteksi));
+        const maxSimPeak = Math.max(...filteredDetections.map(d => d.simultaneousPeak));
+        const totalUniqueTracks = filteredDetections.reduce((sum, d) => sum + d.uniqueTrackCount, 0);
+
+        animateNumber('val-total', totalDeteksi);
+        document.getElementById('sub-total-cells').textContent = `${uniqueLocs} titik lokasi (~11m) · Est. ~${estMassKg} kg`;
+        animateNumber('val-avg-loc', avgPerLoc, "", 1);
+        animateNumber('val-avg-conf', avgConf, "%");
+        document.getElementById('sub-track-breakdown').textContent = `Puncak frame: ${maxSimPeak} · Akumulasi ID: ${totalUniqueTracks}`;
+
+        document.getElementById('bar-density').style.width = `${Math.min(100, (avgPerLoc / 25) * 100)}%`;
+        document.getElementById('bar-conf').style.width = `${Math.min(100, avgConf)}%`;
+
+        const dailyByIso = {};
+        const hourlyData = Array(24).fill(0);
+        const hourlyDetails = Array(24).fill().map(() => []);
+
+        filteredDetections.forEach(d => {
+            const isoKey = toIsoDateKey(d.timestamp);
+            const displayDate = d.timestamp.toLocaleDateString('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric'
+            });
+            const timeStr = d.timestamp.toLocaleTimeString('id-ID', {
+                hour: '2-digit', minute: '2-digit'
+            }).replace('.', ':');
+
+            if (!dailyByIso[isoKey]) {
+                dailyByIso[isoKey] = { label: displayDate, count: 0, details: [] };
+            }
+            dailyByIso[isoKey].count += d.jumlah;
+            dailyByIso[isoKey].details.push({
+                time: timeStr,
+                jumlah: d.jumlah,
+                cellKey: d.cellKey,
+                conf: d.confidencePct
+            });
+
+            const hour = d.timestamp.getHours();
+            if (hour >= 0 && hour < 24) {
+                hourlyData[hour] += d.jumlah;
+                hourlyDetails[hour].push({
+                    time: timeStr,
+                    jumlah: d.jumlah,
+                    cellKey: d.cellKey
+                });
+            }
+        });
+
+        const sortedIsoKeys = Object.keys(dailyByIso).sort((a, b) => a.localeCompare(b));
+        const sortedLabels = sortedIsoKeys.map(k => dailyByIso[k].label);
+        const sortedCounts = sortedIsoKeys.map(k => dailyByIso[k].count);
+        const detailsByIndex = sortedIsoKeys.map(k => dailyByIso[k].details);
+
+        const maxHourVal = Math.max(...hourlyData);
+        const peakHour = hourlyData.indexOf(maxHourVal);
+        document.getElementById('val-peak').textContent = `${peakHour.toString().padStart(2, '0')}:00`;
+        document.getElementById('sub-peak-count').textContent = `${maxHourVal} sampah terdeteksi pada jam puncak`;
+        document.getElementById('bar-peak').style.width = `${Math.min(100, (maxHourVal / Math.max(1, totalDeteksi)) * 100)}%`;
+
+        renderCharts(sortedLabels, sortedCounts, hourlyData, detailsByIndex, hourlyDetails);
+        renderHotspotTable();
+
+        window.renderMinimap = () => initMinimapEngine();
+        if (window.googleMapsReady) window.renderMinimap();
+    }
+
+    function focusHotspotOnMinimap(index, shouldScrollToMap = false) {
+        if (!topHotspots.length || !map) return;
+        activeHotspotIdx = (index + topHotspots.length) % topHotspots.length;
+        const item = topHotspots[activeHotspotIdx];
+
+        map.panTo({ lat: item.lat, lng: item.lng });
+        map.setZoom(19);
+
+        document.getElementById('ov-rank').textContent = `PRIORITAS #${activeHotspotIdx + 1}`;
+        document.getElementById('ov-title').textContent = `Lokasi ${item.cellKey} — ${item.jumlah} Sampah`;
+        document.getElementById('ov-sub').textContent = `Puncak: ${item.simultaneousPeak} · ID Unik: ${item.uniqueTrackCount} · Keyakinan: ${item.confidencePct}% · Alt: ${item.altitude ? item.altitude.toFixed(1) + 'm' : '-'}`;
+
+        document.querySelectorAll('#hotspot-table-body tr').forEach((row, rIdx) => {
+            row.classList.toggle('active-row', rIdx === activeHotspotIdx);
+        });
+
+        if (shouldScrollToMap) {
+            document.getElementById('minimap-container').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    }
+
+    function renderHotspotTable() {
+        const tbody = document.getElementById('hotspot-table-body');
+        topHotspots = [...filteredDetections]
+            .sort((a, b) => b.jumlah - a.jumlah || b.confidencePct - a.confidencePct)
+            .slice(0, 6);
+
+        tbody.innerHTML = '';
+        topHotspots.forEach((d, idx) => {
+            const tr = document.createElement('tr');
+            tr.style.cursor = 'pointer';
+            const tsStr = d.timestamp.toLocaleString('id-ID', {
+                day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+            });
+            const gmapsUrl = `https://www.google.com/maps?q=${d.lat.toFixed(6)},${d.lng.toFixed(6)}`;
+
+            tr.innerHTML = `
+                <td class="mono"><b>#${idx + 1}</b></td>
+                <td class="mono" style="font-weight:700; color:var(--primary);">${d.cellKey}</td>
+                <td><span class="status-tag ${d.jumlah > 25 ? 'tag-low' : (d.jumlah > 10 ? 'tag-warn' : 'tag-good')}">${d.jumlah} sampah</span></td>
+                <td class="mono">${d.simultaneousPeak} / ${d.uniqueTrackCount}</td>
+                <td class="mono"><b>${d.confidencePct}%</b></td>
+                <td class="mono">${d.altitude ? d.altitude.toFixed(1) + ' m' : '-'}</td>
+                <td style="color:var(--text-muted);">${tsStr}</td>
+                <td>
+                    <a href="${gmapsUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();" style="color:var(--primary); font-weight:600; text-decoration:none; font-size:12px;">
+                        Rute Maps &nearr;
+                    </a>
+                </td>
+            `;
+            tr.addEventListener('click', () => focusHotspotOnMinimap(idx, true));
+            tbody.appendChild(tr);
+        });
+    }
+
+    document.getElementById('btnNextHotspot').addEventListener('click', () => {
+        focusHotspotOnMinimap(activeHotspotIdx + 1, false);
+    });
+    document.getElementById('btnPrevHotspot').addEventListener('click', () => {
+        focusHotspotOnMinimap(activeHotspotIdx <= 0 ? topHotspots.length - 1 : activeHotspotIdx - 1, false);
+    });
+    document.getElementById('btnResetMinimap').addEventListener('click', () => {
+        if (!map || !filteredDetections.length) return;
+        activeHotspotIdx = -1;
+        const bounds = new google.maps.LatLngBounds();
+        filteredDetections.forEach(d => bounds.extend({ lat: d.lat, lng: d.lng }));
+        map.fitBounds(bounds);
+        document.getElementById('ov-rank').textContent = "AREA";
+        document.getElementById('ov-title').textContent = `Menampilkan ${filteredDetections.length} Titik Lokasi Aktif`;
+        document.getElementById('ov-sub').textContent = "Klik 'Titik Terpadat Berikutnya' untuk meninjau lokasi tumpukan tertinggi";
+        document.querySelectorAll('#hotspot-table-body tr').forEach(r => r.classList.remove('active-row'));
+    });
+
+    function renderCharts(dates, counts, hourly, detailsByIndex, hourlyDetails) {
+        Chart.defaults.color = '#64748b';
+        Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, sans-serif";
+
+        if (charts.daily) charts.daily.destroy();
+        if (charts.hourly) charts.hourly.destroy();
+
+        charts.daily = new Chart(document.getElementById('dailyChart'), {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Volume Sampah',
+                    data: counts,
+                    backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                    borderColor: '#2563eb',
+                    borderWidth: 2.2,
+                    tension: 0.32,
+                    fill: true,
+                    pointBackgroundColor: '#2563eb',
+                    pointBorderColor: '#fff',
+                    pointBorderWidth: 1.5,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        padding: 10,
+                        callbacks: {
+                            title: (items) => items[0].label,
+                            label: (context) => {
+                                const details = detailsByIndex[context.dataIndex] || [];
+                                let detailTexts = details
+                                    .map(d => `${d.time} [${d.cellKey}] : ${d.jumlah} sampah (${d.conf}%)`)
+                                    .sort();
+                                const limit = 6;
+                                if (detailTexts.length > limit) {
+                                    const rem = detailTexts.length - limit;
+                                    detailTexts = detailTexts.slice(0, limit);
+                                    detailTexts.push(`+${rem} lokasi lainnya`);
+                                }
+                                return [
+                                    `Total Harian: ${context.parsed.y} sampah (${details.length} lokasi)`,
+                                    ...detailTexts
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+
+        charts.hourly = new Chart(document.getElementById('hourlyChart'), {
+            type: 'bar',
+            data: {
+                labels: Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`),
+                datasets: [{
+                    label: 'Volume Sampah',
+                    data: hourly,
+                    backgroundColor: '#0f172a',
+                    hoverBackgroundColor: '#2563eb',
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#0f172a',
+                        titleColor: '#f8fafc',
+                        bodyColor: '#cbd5e1',
+                        padding: 10,
+                        callbacks: {
+                            title: (items) => `Pukul ${items[0].label}`,
+                            label: (context) => {
+                                const hour = parseInt(context.label);
+                                const details = hourlyDetails[hour];
+                                if (!details || details.length === 0) return ['Tidak ada aktivitas deteksi'];
+                                let detailTexts = details
+                                    .map(d => `${d.time} [${d.cellKey}] : ${d.jumlah} sampah`)
+                                    .sort();
+                                if (detailTexts.length > 5) {
+                                    const rem = detailTexts.length - 5;
+                                    detailTexts = detailTexts.slice(0, 5);
+                                    detailTexts.push(`+${rem} lokasi lainnya`);
+                                }
+                                return [
+                                    `Total Jam Ini: ${context.parsed.y} sampah`,
+                                    ...detailTexts
+                                ];
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, maxTicksLimit: 12 } }
+                }
+            }
+        });
+    }
+
+    function renderFieldTestsSection() {
+        const tbody = document.getElementById('field-test-table-body');
+        const badge = document.getElementById('field-test-summary-badge');
+        const chartWrapper = document.getElementById('field-test-chart-wrapper');
+        const heroAccEl = document.getElementById('hero-val-acc');
+
+        if (fieldTests.length === 0) {
+            badge.textContent = "0 Sesi Terekam";
+            if (heroAccEl) heroAccEl.textContent = "--%";
+            chartWrapper.style.display = "none";
+            tbody.innerHTML = `
+                <tr><td colspan="12" style="text-align:center; color:var(--text-muted);">Belum ada dokumen pada koleksi pengujian_deteksi.</td></tr>
+            `;
+            return;
+        }
+
+        const avgAcc = (fieldTests.reduce((s, t) => s + (Number(t.akurasi_persen) || 0), 0) / fieldTests.length).toFixed(1);
+        const avgInfer = (fieldTests.reduce((s, t) => s + (Number(t.mean_infer_ms) || 0), 0) / fieldTests.length).toFixed(1);
+        badge.textContent = `${fieldTests.length} Sesi Uji · Rata-rata Akurasi: ${avgAcc}% · Rata-rata Proses AI: ${avgInfer} ms`;
+        if (heroAccEl) heroAccEl.textContent = `${avgAcc}%`;
+
+        tbody.innerHTML = '';
+        fieldTests.forEach(t => {
+            const tsStr = t.parsedTime
+                ? t.parsedTime.toLocaleString('id-ID', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
+                  })
+                : (t.timestamp || '-');
+            const acc = Math.min(100, Math.max(0, Number(t.akurasi_persen) || 0));
+            const tagClass = acc >= 80 ? 'tag-good' : (acc >= 60 ? 'tag-warn' : 'tag-low');
+            const barColor = acc >= 80 ? '#16a34a' : (acc >= 60 ? '#d97706' : '#dc2626');
+
+            tbody.innerHTML += `
+                <tr>
+                    <td style="color:var(--text-muted);">${tsStr}</td>
+                    <td style="font-weight:700;">${t.skenario || '-'}</td>
+                    <td>${t.kondisi_cahaya || '-'}</td>
+                    <td class="mono">${t.ketinggian_m ?? '-'}m / ${t.ketinggian_aktual_m ?? '-'}m</td>
+                    <td class="mono">${t.kecepatan_maks_ms ?? 0} / ${t.kecepatan_rata_ms ?? 0} m/s</td>
+                    <td class="mono"><b>${t.ground_truth_count ?? 0}</b></td>
+                    <td class="mono"><b>${t.detected_count ?? 0}</b> <span style="color:var(--text-muted);">(${t.peak_simultaneous ?? '-'}/${t.unique_confirmed_tracks ?? '-'})</span></td>
+                    <td class="mono">${t.selisih ?? 0}</td>
+                    <td>
+                        <div class="acc-cell">
+                            <span class="status-tag ${tagClass}">${acc.toFixed(1)}%</span>
+                            <div class="acc-mini-track">
+                                <div class="acc-mini-fill" style="width:${acc}%; background:${barColor};"></div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="mono">${Number(t.avg_confidence_persen || 0).toFixed(1)}%</td>
+                    <td class="mono">${t.mean_capture_ms ?? '-'} / ${t.mean_infer_ms ?? '-'} ms</td>
+                    <td class="mono">${t.dropped_frames ?? 0}</td>
+                </tr>
+            `;
+        });
+
+        chartWrapper.style.display = "block";
+        const chronologicalTests = [...fieldTests].slice(0, 12).reverse();
+        const labels = chronologicalTests.map(t => t.skenario || 'Sesi');
+        const gtData = chronologicalTests.map(t => Number(t.ground_truth_count) || 0);
+        const detData = chronologicalTests.map(t => Number(t.detected_count) || 0);
+
+        if (charts.fieldTest) charts.fieldTest.destroy();
+        charts.fieldTest = new Chart(document.getElementById('fieldTestChart'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Jumlah Asli (Ground Truth)',
+                        data: gtData,
+                        backgroundColor: '#cbd5e1',
+                        borderRadius: 4
+                    },
+                    {
+                        label: 'Terdeteksi Sistem Drone',
+                        data: detData,
+                        backgroundColor: '#2563eb',
+                        borderRadius: 4
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    function initMinimapEngine() {
+        if (filteredDetections.length === 0) return;
+
+        if (!map) {
+            map = new google.maps.Map(document.getElementById("minimap-container"), {
+                zoom: 14,
+                mapTypeId: 'satellite',
+                disableDefaultUI: false,
+                mapTypeControl: true,
+                zoomControl: true,
+                streetViewControl: false,
+                fullscreenControl: false,
+                gestureHandling: 'cooperative'
+            });
+
+            heatmapLayer = new google.maps.visualization.HeatmapLayer({
+                data: [],
+                map: map,
+                radius: 22,
+                maxIntensity: 50,
+                opacity: 0.85,
+                gradient: [
+                    'rgba(0, 255, 0, 0)', 'rgba(0, 255, 0, 1)', 'rgba(0, 255, 0, 1)',
+                    'rgba(255, 255, 0, 1)', 'rgba(255, 255, 0, 1)', 'rgba(255, 255, 0, 1)',
+                    'rgba(255, 165, 0, 1)', 'rgba(255, 165, 0, 1)', 'rgba(255, 165, 0, 1)',
+                    'rgba(255, 0, 0, 1)', 'rgba(255, 0, 0, 1)'
+                ]
+            });
+
+            map.addListener('zoom_changed', () => {
+                const zoom = map.getZoom();
+                if (zoom >= 19) heatmapLayer.setOptions({ radius: 40, maxIntensity: 35 });
+                else if (zoom >= 16) heatmapLayer.setOptions({ radius: 22, maxIntensity: 75 });
+                else if (zoom >= 13) heatmapLayer.setOptions({ radius: 12, maxIntensity: 140 });
+                else heatmapLayer.setOptions({ radius: 6, maxIntensity: 220 });
+            });
+        }
+
+        const heatData = filteredDetections.map(d => ({
+            location: new google.maps.LatLng(d.lat, d.lng),
+            weight: d.jumlah
+        }));
+        heatmapLayer.setData(heatData);
+
+        minimapMarkers.forEach(m => m.setMap(null));
+        minimapMarkers = [];
+        topHotspots.slice(0, 5).forEach((h, idx) => {
+            const m = new google.maps.Marker({
+                position: { lat: h.lat, lng: h.lng },
+                map: map,
+                title: `#${idx + 1} (${h.jumlah} sampah)`,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    scale: 9,
+                    fillColor: idx === 0 ? "#ef4444" : "#2563eb",
+                    fillOpacity: 1,
+                    strokeWeight: 2,
+                    strokeColor: "#ffffff"
+                }
+            });
+            m.addListener('click', () => focusHotspotOnMinimap(idx, false));
+            minimapMarkers.push(m);
+        });
+
+        const bounds = new google.maps.LatLngBounds();
+        heatData.forEach(hd => bounds.extend(hd.location));
+        map.fitBounds(bounds);
+    }
+
+    document.querySelectorAll('.stat-filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.stat-filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.getAttribute('data-filter');
+            applyStatFilterAndRender();
+        });
+    });
+
+    function downloadCsv(filename, rows) {
+        const csvContent = rows.map(r => r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+        const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+    }
+
+    document.getElementById('btnExportDetections').addEventListener('click', () => {
+        if (allDetections.length === 0) return alert("Belum ada data waste_detections_v2.");
+        const headers = ['cellKey', 'label', 'jumlahDeteksi', 'simultaneousPeak', 'uniqueTrackCount', 'confidencePct', 'latitude', 'longitude', 'altitude', 'timestampISO', 'epochMs'];
+        const rows = allDetections.map(d => [
+            d.cellKey, d.label, d.jumlah, d.simultaneousPeak, d.uniqueTrackCount,
+            d.confidencePct, d.lat, d.lng, d.altitude, d.timestamp.toISOString(), d.epochMs
+        ]);
+        downloadCsv('waste_detections_v2.csv', [headers, ...rows]);
+    });
+
+    document.getElementById('btnExportFieldTests').addEventListener('click', () => {
+        if (fieldTests.length === 0) return alert("Belum ada data pengujian_deteksi.");
+        const headers = [
+            'skenario', 'kondisi_cahaya', 'ketinggian_m', 'ketinggian_aktual_m',
+            'kecepatan_maks_ms', 'kecepatan_rata_ms', 'ground_truth_count',
+            'detected_count', 'peak_simultaneous', 'unique_confirmed_tracks',
+            'selisih', 'akurasi_persen', 'avg_confidence_persen',
+            'mean_capture_ms', 'mean_infer_ms', 'dropped_frames', 'durasi_detik',
+            'cellKey', 'latitude', 'longitude', 'timestamp'
+        ];
+        const rows = fieldTests.map(t => headers.map(h => t[h] ?? ''));
+        downloadCsv('pengujian_deteksi.csv', [headers, ...rows]);
+    });
+</script>
 </body>
 </html>

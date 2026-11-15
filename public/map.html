@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Peta Interaktif — UAV Waste Detection System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        #map {
+            height: 100vh;
+            height: 100dvh;
+            width: 100vw;
+        }
+
+        /* Top Center Filter Bar */
+        .controls {
+            position: absolute;
+            top: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 999;
+            display: flex;
+            gap: 4px;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-std);
+            box-shadow: var(--shadow-float);
+        }
+        .time-button {
+            padding: 6px 12px;
+            background: transparent;
+            border: none;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 12.5px;
+            color: var(--text-secondary);
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+        .time-button:hover { background: var(--bg-subtle); color: var(--text-main); }
+        .time-button.active {
+            background: var(--text-main);
+            color: #ffffff;
+        }
+
+        /* Top Right Page Navigation */
+        .nav-links {
+            position: absolute;
+            top: 10px;
+            right: 58px;
+            z-index: 999;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 4px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-std);
+            box-shadow: var(--shadow-float);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .nav-links a {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 12.5px;
+            padding: 6px 10px;
+            border-radius: var(--radius-sm);
+            transition: background 0.15s, color 0.15s;
+            white-space: nowrap;
+        }
+        .nav-links a:hover { background: var(--bg-subtle); color: var(--text-main); }
+
+        /* Telemetry Status Bar */
+        #hud-status {
+            position: absolute;
+            top: 58px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 998;
+            background: rgba(15, 23, 42, 0.9);
+            color: #f8fafc;
+            padding: 5px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 11.5px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: var(--shadow-float);
+            white-space: nowrap;
+            font-variant-numeric: tabular-nums;
+        }
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            background-color: #22c55e;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .hud-sep {
+            width: 1px;
+            height: 11px;
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .hud-val {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            color: #ffffff;
+        }
+
+        /* Legend Panel */
+        #legend {
+            position: absolute;
+            bottom: 24px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.96);
+            color: var(--text-main);
+            padding: 12px 14px;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-std);
+            z-index: 999;
+            box-shadow: var(--shadow-float);
+            width: 310px;
+        }
+        .legend-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            gap: 6px;
+        }
+        .legend-title {
+            margin: 0;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+        .scale-toggle {
+            background: var(--bg-subtle);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-strong);
+            border-radius: 4px;
+            padding: 2px 7px;
+            font-size: 10.5px;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .scale-toggle:hover { background: var(--border-std); color: var(--text-main); }
+        .scale-meta {
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+        }
+
+        /* Responsive Mobile & Tablet Adjustments */
+        @media screen and (max-width: 860px) {
+            .nav-links {
+                top: 10px;
+                right: 54px;
+                padding: 3px;
+                gap: 2px;
+            }
+            .nav-links a {
+                font-size: 11.5px;
+                padding: 6px 8px;
+            }
+            .nav-text-extra {
+                display: none;
+            }
+            .controls {
+                top: 54px;
+                left: 10px;
+                transform: none;
+                width: calc(100vw - 20px);
+                justify-content: space-between;
+            }
+            .time-button {
+                flex: 1;
+                text-align: center;
+                padding: 6px 4px;
+                font-size: 11.5px;
+            }
+            #hud-status {
+                top: 94px;
+                left: 10px;
+                transform: none;
+                width: calc(100vw - 20px);
+                justify-content: space-between;
+                font-size: 10.5px;
+                padding: 5px 10px;
+                gap: 6px;
+                overflow-x: auto;
+            }
+            #legend {
+                width: calc(100vw - 76px) !important;
+                max-width: 235px !important;
+                left: 10px !important;
+                bottom: 20px !important;
+                padding: 9px 11px !important;
+            }
+            .legend-title {
+                font-size: 11.5px;
+            }
+            .scale-meta {
+                font-size: 9.5px;
+                margin-bottom: 5px;
+            }
+            #leg-caption {
+                font-size: 9px !important;
+                margin-top: 4px !important;
+                padding-top: 4px !important;
+            }
+        }
+
+        /* Landscape Phone Mode */
+        @media screen and (max-height: 480px) {
+            #hud-status { display: none; }
+            #legend {
+                bottom: 10px !important;
+                padding: 6px 10px !important;
+                max-width: 210px !important;
+            }
+            #leg-caption, .scale-meta { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="nav-links">
+        <a href="index.html">
+            <svg class="icon-svg" viewBox="0 0 24 24"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+            <span>Overview<span class="nav-text-extra"> &amp; Analitik</span></span>
+        </a>
+        <a href="manage-data.html">
+            <svg class="icon-svg" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            <span>Data</span>
+        </a>
+    </div>
+
+    <div class="controls" role="group" aria-label="Filter Rentang Waktu">
+        <button class="time-button active" data-filter="all">Semua Waktu</button>
+        <button class="time-button" data-filter="today">Hari Ini</button>
+        <button class="time-button" data-filter="week">Minggu Ini</button>
+        <button class="time-button" data-filter="month">Bulan Ini</button>
+    </div>
+
+    <div id="hud-status">
+        <span><span class="status-dot"></span> Live</span>
+        <span class="hud-sep"></span>
+        <span>Objek: <span id="hud-total-waste" class="hud-val">0</span></span>
+        <span class="hud-sep"></span>
+        <span>Sel: <span id="hud-total-cells" class="hud-val">0</span></span>
+        <span class="hud-sep"></span>
+        <span id="hud-cluster-info">Radius: <span class="hud-val">20m</span></span>
+    </div>
+
+    <div id="legend">
+        <div class="legend-top">
+            <h4 class="legend-title">Estimasi Volume</h4>
+            <button id="toggleScaleModeBtn" class="scale-toggle" title="Ubah mode skala adaptif atau statis">
+                Mode: Adaptif
+            </button>
+        </div>
+        <div id="leg-scale-badge" class="scale-meta">
+            Zoom 16 · Radius Klaster 20m
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 10px; font-weight: 600; margin-bottom: 4px; color: var(--text-secondary);">
+            <span style="flex: 1; text-align: center;">Rendah</span>
+            <span style="flex: 1; text-align: center;">Sedang</span>
+            <span style="flex: 1; text-align: center;">Tinggi</span>
+            <span style="flex: 1; text-align: center;">Padat</span>
+        </div>
+        <div style="position: relative; width: 100%; height: 11px; background: linear-gradient(to right, #00FF00, #FFFF00, #FFA500, #FF0000); border-radius: 3px; border: 1px solid var(--border-strong);">
+            <div style="position: absolute; left: 25%; top: 0; bottom: 0; border-left: 1.5px solid rgba(255,255,255,0.9);"></div>
+            <div style="position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px solid rgba(255,255,255,0.9);"></div>
+            <div style="position: absolute; left: 75%; top: 0; bottom: 0; border-left: 1.5px solid rgba(255,255,255,0.9);"></div>
+        </div>
+        <div class="mono" style="display: flex; justify-content: space-between; font-size: 10.5px; font-weight: 700; margin-top: 4px; color: var(--text-main);">
+            <span id="leg-r1" style="flex: 1; text-align: center;">1–10</span>
+            <span id="leg-r2" style="flex: 1; text-align: center;">11–25</span>
+            <span id="leg-r3" style="flex: 1; text-align: center;">26–40</span>
+            <span id="leg-r4" style="flex: 1; text-align: center;">41+</span>
+        </div>
+        <div id="leg-caption" style="margin-top: 6px; font-size: 10px; color: var(--text-muted); border-top: 1px solid var(--border-std); padding-top: 5px;">
+            KDE maxIntensity: 85 (proporsional zoom)
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <script style="display:none;">
+        window.googleMapsBridgeCallback = function() {
+            if (window.jalankanInisialisasiPeta) { window.jalankanInisialisasiPeta(); }
+            else { window.googleMapsScriptSudahSiap = true; }
+        };
+    </script>
+    <script type="module" src="/app.js"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDaN7fGUo5I4rDQNhNS5uJA97CJp5gh_Qw&v=3.64&libraries=visualization&callback=googleMapsBridgeCallback"></script>
+</body>
+</html>
