@@ -428,61 +428,111 @@
             color: #34d399;
         }
 
+        /* Step Progress Bar Indicator on Active Button */
+        .story-step-btn::after {
+            content: "";
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 3px;
+            width: 0%;
+            background: var(--primary);
+            transition: none;
+        }
+        .story-step-btn.active.playing-progress::after {
+            width: 100%;
+            transition: width 6s linear;
+        }
+
         /* Visual Graphic Canvas inside Stage */
         .stage-visual-canvas {
-            background: #090d16;
-            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: radial-gradient(circle at 50% 50%, #111c33 0%, #070b14 100%);
+            border: 1px solid rgba(148, 163, 184, 0.22);
             border-radius: var(--radius-md);
-            height: 230px;
+            height: 255px;
             position: relative;
             overflow: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             margin-bottom: 20px;
-            background-image:
-                linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-            background-size: 24px 24px;
+        }
+        .stage-svg {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
-        /* Animated Visuals for Steps 1-4 */
-        @keyframes scanBeam {
-            0%, 100% { transform: translateY(-45px); opacity: 0.4; }
-            50% { transform: translateY(45px); opacity: 0.85; }
+        /* Custom Keyframe Choreography for SVG Animations */
+        @keyframes rotorSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
         }
-        @keyframes floatPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.06); }
+        @keyframes droneHover {
+            0%, 100% { transform: translate(0px, 0px); }
+            50% { transform: translate(0px, -6px); }
         }
-        .sim-box-detect {
-            border: 2px solid #ef4444;
-            background: rgba(239, 68, 68, 0.14);
-            border-radius: 6px;
-            position: absolute;
-            animation: floatPulse 2.2s infinite ease-in-out;
+        @keyframes terrainScroll {
+            from { stroke-dashoffset: 0; }
+            to { stroke-dashoffset: 48; }
         }
-        .sim-box-label {
-            position: absolute;
-            top: -20px;
-            left: -2px;
-            background: #ef4444;
-            color: #ffffff;
-            font-family: var(--font-mono);
-            font-size: 10px;
-            font-weight: 700;
-            padding: 1px 6px;
-            border-radius: 3px;
-            white-space: nowrap;
+        @keyframes radarPulse {
+            0% { transform: scale(0.75); opacity: 0.75; }
+            100% { transform: scale(1.35); opacity: 0; }
         }
-        .sim-box-track {
-            border: 2px solid #38bdf8;
-            background: rgba(56, 189, 248, 0.14);
-            border-radius: 6px;
-            position: absolute;
+        @keyframes laserSweepX {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(380px); }
         }
-        .sim-box-track .sim-box-label {
-            background: #0284c7;
+        @keyframes bboxLock {
+            0%, 100% { transform: scale(1); opacity: 0.95; }
+            50% { transform: scale(1.04); opacity: 1; }
+        }
+        @keyframes dashFlow {
+            to { stroke-dashoffset: -32; }
+        }
+        @keyframes cameraFramePan {
+            0%, 100% { transform: translateX(-18px); }
+            50% { transform: translateX(22px); }
+        }
+        @keyframes heatmapBreathe {
+            0%, 100% { transform: scale(0.94); opacity: 0.82; }
+            50% { transform: scale(1.08); opacity: 1; }
+        }
+
+        .svg-rotor {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: rotorSpin 0.35s linear infinite;
+        }
+        .svg-drone-body {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: droneHover 2.6s ease-in-out infinite;
+        }
+        .svg-radar-ring {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: radarPulse 2.2s ease-out infinite;
+        }
+        .svg-laser-sweep {
+            animation: laserSweepX 3.8s ease-in-out infinite;
+        }
+        .svg-bbox-lock {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: bboxLock 2s ease-in-out infinite;
+        }
+        .svg-dash-flow {
+            animation: dashFlow 1.2s linear infinite;
+        }
+        .svg-cam-pan {
+            animation: cameraFramePan 3.6s ease-in-out infinite;
+        }
+        .svg-heat-glow {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: heatmapBreathe 2.8s ease-in-out infinite;
         }
 
         .stage-explanation h3 {
@@ -1217,44 +1267,149 @@
             title: "1. Drone Memindai Area & Mencatat Titik Koordinat GPS",
             desc: "Drone terbang di atas lokasi yang dipantau dengan kamera menghadap tegak lurus ke bawah (sudut 90 derajat). Selama terbang, sistem secara otomatis membaca posisi koordinat GPS dan ketinggian drone agar setiap temuan sampah memiliki titik lokasi yang presisi.",
             pills: [
-                { k: "Arah Kamera", v: "Tegak Lurus ke Bawah" },
+                { k: "Arah Kamera", v: "Tegak Lurus ke Bawah (-90°)" },
                 { k: "Ketinggian Efektif", v: "5 hingga 10 Meter" },
-                { k: "Data Lokasi", v: "Koordinat GPS Otomatis" }
+                { k: "Data Lokasi", v: "Koordinat GPS Otomatis (10 Hz)" }
             ],
             visualHtml: `
-                <div style="width:100%; height:100%; position:relative; display:flex; flex-direction:column; align-items:center; justify-content:center;">
-                    <div style="background:#1e293b; border:1px solid #38bdf8; color:#38bdf8; font-family:var(--font-mono); font-size:11px; font-weight:700; padding:6px 14px; border-radius:999px; z-index:2; box-shadow:0 0 20px rgba(56,189,248,0.25);">
-                        DRONE · GPS: -6.9248, 107.7176 · ALT: 7.0m
-                    </div>
-                    <div style="width:220px; height:120px; border-left:2px dashed rgba(56,189,248,0.45); border-right:2px dashed rgba(56,189,248,0.45); border-bottom:2px solid #22c55e; background:linear-gradient(180deg, rgba(56,189,248,0.12) 0%, rgba(34,197,94,0.18) 100%); position:relative; display:flex; align-items:center; justify-content:center; overflow:hidden;">
-                        <div style="width:100%; height:3px; background:#38bdf8; box-shadow:0 0 12px #38bdf8; animation:scanBeam 2.4s infinite ease-in-out;"></div>
-                        <span style="position:absolute; bottom:6px; font-family:var(--font-mono); font-size:10px; color:#86efac; font-weight:600;">AREA PANDANG KAMERA (~11 x 11 Meter)</span>
-                    </div>
-                </div>
+                <svg class="stage-svg" viewBox="0 0 560 250" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <linearGradient id="fovGrad" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.42"/>
+                            <stop offset="100%" stop-color="#22c55e" stop-opacity="0.08"/>
+                        </linearGradient>
+                        <pattern id="gridPat1" width="28" height="28" patternUnits="userSpaceOnUse">
+                            <path d="M 28 0 L 0 0 0 28" fill="none" stroke="rgba(148,163,184,0.12)" stroke-width="1"/>
+                        </pattern>
+                    </defs>
+
+                    <!-- Ground Grid Background -->
+                    <rect width="560" height="250" fill="url(#gridPat1)"/>
+
+                    <!-- Ground Scanning Cell (~11x11m Perspective Box) -->
+                    <polygon points="150,218 410,218 365,166 195,166" fill="rgba(34,197,94,0.12)" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="5 3"/>
+                    <ellipse cx="280" cy="192" rx="52" ry="16" fill="none" stroke="#38bdf8" stroke-width="1.5" class="svg-radar-ring"/>
+                    <ellipse cx="280" cy="192" rx="28" ry="9" fill="rgba(56,189,248,0.2)" stroke="#38bdf8" stroke-width="1.2"/>
+
+                    <!-- Sample Waste Objects on Ground -->
+                    <rect x="248" y="186" width="12" height="7" rx="2" fill="#f97316"/>
+                    <circle cx="294" cy="195" r="4.5" fill="#eab308"/>
+                    <rect x="275" y="182" width="10" height="6" rx="1.5" fill="#ef4444"/>
+
+                    <!-- Camera Frustum Cone from Drone to Ground -->
+                    <polygon points="280,76 160,214 400,214" fill="url(#fovGrad)"/>
+                    <line x1="280" y1="76" x2="160" y2="214" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="4 4" class="svg-dash-flow"/>
+                    <line x1="280" y1="76" x2="400" y2="214" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="4 4" class="svg-dash-flow"/>
+                    <line x1="280" y1="76" x2="280" y2="192" stroke="rgba(56,189,248,0.5)" stroke-width="1" stroke-dasharray="3 3"/>
+
+                    <!-- Animated Quadcopter Drone (Top-Front Hybrid View) -->
+                    <g class="svg-drone-body">
+                        <!-- Arms -->
+                        <line x1="236" y1="54" x2="324" y2="54" stroke="#cbd5e1" stroke-width="3.5" stroke-linecap="round"/>
+                        <line x1="248" y1="68" x2="312" y2="40" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                        <line x1="248" y1="40" x2="312" y2="68" stroke="#94a3b8" stroke-width="2.5" stroke-linecap="round"/>
+                        <!-- Central Body & Nadir Gimbal Camera -->
+                        <rect x="264" y="44" width="32" height="20" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.8"/>
+                        <circle cx="280" cy="68" r="6" fill="#0284c7" stroke="#e0f2fe" stroke-width="1.5"/>
+                        <circle cx="280" cy="54" r="3" fill="#22c55e"/>
+                        <!-- 4 Spinning Rotors -->
+                        <g class="svg-rotor" style="transform-origin: 236px 54px;">
+                            <circle cx="236" cy="54" r="13" fill="rgba(56,189,248,0.12)" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="8 6"/>
+                            <line x1="225" y1="54" x2="247" y2="54" stroke="#e2e8f0" stroke-width="2"/>
+                        </g>
+                        <g class="svg-rotor" style="transform-origin: 324px 54px;">
+                            <circle cx="324" cy="54" r="13" fill="rgba(56,189,248,0.12)" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="8 6"/>
+                            <line x1="313" y1="54" x2="335" y2="54" stroke="#e2e8f0" stroke-width="2"/>
+                        </g>
+                        <g class="svg-rotor" style="transform-origin: 248px 40px;">
+                            <circle cx="248" cy="40" r="11" fill="rgba(56,189,248,0.1)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="6 5"/>
+                        </g>
+                        <g class="svg-rotor" style="transform-origin: 312px 40px;">
+                            <circle cx="312" cy="40" r="11" fill="rgba(56,189,248,0.1)" stroke="#94a3b8" stroke-width="1" stroke-dasharray="6 5"/>
+                        </g>
+                    </g>
+
+                    <!-- Telemetry HUD Badges -->
+                    <rect x="18" y="16" width="168" height="54" rx="6" fill="rgba(15,23,42,0.88)" stroke="rgba(56,189,248,0.35)"/>
+                    <text x="28" y="34" fill="#38bdf8" font-family="monospace" font-size="10.5" font-weight="700">TELEMETRI GPS AKTIF</text>
+                    <text x="28" y="50" fill="#f8fafc" font-family="monospace" font-size="11" font-weight="600">-6.9248°, 107.7176°</text>
+                    <text x="28" y="63" fill="#94a3b8" font-family="monospace" font-size="9.5">Satelit: 14 Lock · 10 Hz</text>
+
+                    <rect x="386" y="16" width="156" height="54" rx="6" fill="rgba(15,23,42,0.88)" stroke="rgba(34,197,94,0.35)"/>
+                    <text x="396" y="34" fill="#4ade80" font-family="monospace" font-size="10.5" font-weight="700">KAMERA NADIR (-90°)</text>
+                    <text x="396" y="50" fill="#f8fafc" font-family="monospace" font-size="11" font-weight="600">Ketinggian: 7.5 Meter</text>
+                    <text x="396" y="63" fill="#94a3b8" font-family="monospace" font-size="9.5">Cakupan Petak ~11x11m</text>
+
+                    <text x="280" y="236" text-anchor="middle" fill="#86efac" font-family="monospace" font-size="10.5" font-weight="700">
+                        AREA PEMINDAIAN PERMUKAAN TANAH (~11 × 11 METER)
+                    </text>
+                </svg>
             `
         },
         {
             badge: "TAHAP 02 DARI 04 · DETEKSI AI REAL-TIME",
             title: "2. AI Mengenali Objek Sampah Secara Instan di Layar",
-            desc: "Tanpa perlu menunggu proses unggah video selesai, kecerdasan buatan (YOLOv8n) langsung memeriksa gambar video di ponsel pengendali. Setiap sampah yang terlihat langsung ditandai dengan kotak merah beserta persentase tingkat keyakinannya.",
+            desc: "Tanpa perlu menunggu proses unggah video selesai, kecerdasan buatan (YOLOv8n) langsung memeriksa gambar video di ponsel pengendali. Setiap sampah yang terlihat langsung ditandai dengan kotak fokus beserta persentase tingkat keyakinannya.",
             pills: [
-                { k: "Pemrosesan AI", v: "Langsung di Ponsel" },
-                { k: "Kecepatan Deteksi", v: "~4 Kali per Detik" },
-                { k: "Batas Keyakinan", v: "Minimal 40% - 50%" }
+                { k: "Pemrosesan AI", v: "Langsung di Ponsel (GPU)" },
+                { k: "Kecepatan Deteksi", v: "~4 Kali per Detik (230 ms)" },
+                { k: "Batas Keyakinan", v: "Minimal 40% Confidence" }
             ],
             visualHtml: `
-                <div style="width:90%; height:82%; border:1px solid #334155; border-radius:8px; position:relative; background:rgba(15,23,42,0.7);">
-                    <div style="position:absolute; top:8px; left:10px; font-family:var(--font-mono); font-size:10px; color:#94a3b8;">LIVE CAMERA FEED · AI ACTIVE</div>
-                    <div class="sim-box-detect" style="width:24%; max-width:72px; height:46px; top:30%; left:8%;">
-                        <span class="sim-box-label">Sampah 91%</span>
-                    </div>
-                    <div class="sim-box-detect" style="width:25%; max-width:76px; height:50px; top:54%; left:39%; animation-delay:0.4s;">
-                        <span class="sim-box-label">Sampah 84%</span>
-                    </div>
-                    <div class="sim-box-detect" style="width:23%; max-width:68px; height:44px; top:28%; right:7%; animation-delay:0.8s;">
-                        <span class="sim-box-label">Sampah 78%</span>
-                    </div>
-                </div>
+                <svg class="stage-svg" viewBox="0 0 560 250" preserveAspectRatio="xMidYMid meet">
+                    <!-- Camera Viewfinder Frame -->
+                    <rect x="24" y="16" width="512" height="218" rx="8" fill="#0b1322" stroke="#334155" stroke-width="1.5"/>
+
+                    <!-- Viewfinder Corner Reticles -->
+                    <path d="M 38 42 L 38 28 L 52 28" fill="none" stroke="#64748b" stroke-width="2"/>
+                    <path d="M 522 42 L 522 28 L 508 28" fill="none" stroke="#64748b" stroke-width="2"/>
+                    <path d="M 38 208 L 38 222 L 52 222" fill="none" stroke="#64748b" stroke-width="2"/>
+                    <path d="M 522 208 L 522 222 L 508 222" fill="none" stroke="#64748b" stroke-width="2"/>
+
+                    <!-- Top Camera HUD Strip -->
+                    <text x="48" y="42" fill="#38bdf8" font-family="monospace" font-size="10.5" font-weight="700">REC ● LIVE FPV 1080p · YOLOv8n GPU DELEGATE</text>
+                    <text x="502" y="42" text-anchor="end" fill="#4ade80" font-family="monospace" font-size="10.5" font-weight="700">3 OBJEK TERDETEKSI</text>
+
+                    <!-- Object 1: Plastic Bottle Silhouette + Bounding Box -->
+                    <g class="svg-bbox-lock">
+                        <!-- Bottle Shape -->
+                        <rect x="108" y="102" width="34" height="18" rx="4" fill="#475569" stroke="#94a3b8" stroke-width="1.2"/>
+                        <rect x="142" y="106" width="8" height="10" rx="2" fill="#64748b"/>
+                        <rect x="150" y="108" width="4" height="6" fill="#ef4444"/>
+                        <!-- Detection Bounding Box -->
+                        <rect x="92" y="84" width="76" height="54" rx="4" fill="rgba(239,68,68,0.12)" stroke="#ef4444" stroke-width="2"/>
+                        <rect x="92" y="66" width="74" height="16" rx="3" fill="#ef4444"/>
+                        <text x="97" y="77" fill="#ffffff" font-family="monospace" font-size="10" font-weight="700">rubbish 91%</text>
+                    </g>
+
+                    <!-- Object 2: Crumpled Cup / Packaging + Bounding Box -->
+                    <g class="svg-bbox-lock" style="animation-delay: 0.45s;">
+                        <polygon points="260,136 292,132 298,158 256,162" fill="#475569" stroke="#94a3b8" stroke-width="1.2"/>
+                        <circle cx="276" cy="146" r="6" fill="#64748b"/>
+                        <rect x="242" y="116" width="74" height="58" rx="4" fill="rgba(239,68,68,0.12)" stroke="#ef4444" stroke-width="2"/>
+                        <rect x="242" y="98" width="74" height="16" rx="3" fill="#ef4444"/>
+                        <text x="247" y="109" fill="#ffffff" font-family="monospace" font-size="10" font-weight="700">rubbish 86%</text>
+                    </g>
+
+                    <!-- Object 3: Plastic Bag Silhouette + Bounding Box -->
+                    <g class="svg-bbox-lock" style="animation-delay: 0.9s;">
+                        <path d="M 404 96 Q 422 86 436 98 Q 446 116 428 126 Q 406 128 400 112 Z" fill="#475569" stroke="#94a3b8" stroke-width="1.2"/>
+                        <rect x="386" y="76" width="72" height="62" rx="4" fill="rgba(239,68,68,0.12)" stroke="#ef4444" stroke-width="2"/>
+                        <rect x="386" y="58" width="74" height="16" rx="3" fill="#ef4444"/>
+                        <text x="391" y="69" fill="#ffffff" font-family="monospace" font-size="10" font-weight="700">rubbish 79%</text>
+                    </g>
+
+                    <!-- Animated Vertical AI Laser Scanner Bar -->
+                    <g class="svg-laser-sweep">
+                        <line x1="90" y1="50" x2="90" y2="205" stroke="#38bdf8" stroke-width="2"/>
+                        <rect x="74" y="50" width="16" height="155" fill="url(#fovGrad)" opacity="0.35"/>
+                    </g>
+
+                    <!-- Bottom Telemetry Strip -->
+                    <text x="280" y="216" text-anchor="middle" fill="#94a3b8" font-family="monospace" font-size="10">
+                        INFERENSI TFLITE: 218 ms · FRAME DROP: 0 · THRESHOLD KEYAKINAN &ge; 40%
+                    </text>
+                </svg>
             `
         },
         {
@@ -1262,22 +1417,55 @@
             title: "3. Mengunci Identitas Objek agar Tidak Dihitung Berulang",
             desc: "Saat drone terbang atau melayang, 1 botol sampah yang sama akan terekam di puluhan frame video berturut-turut. Sistem pelacak otomatis memberikan Nomor ID Unik pada setiap objek, sehingga 1 sampah yang sama tetap dihitung 1 kali, bukan dihitung berlipat ganda.",
             pills: [
-                { k: "Masalah Umum", v: "1 Sampah Terekam Berulang" },
-                { k: "Solusi Sistem", v: "Penguncian Nomor ID Unik" },
+                { k: "Masalah Umum Video", v: "1 Sampah Terekam Berulang" },
+                { k: "Solusi Pelacak", v: "Penguncian Nomor ID Unik" },
                 { k: "Hasil Hitungan", v: "Akurat & Bebas Duplikasi" }
             ],
             visualHtml: `
-                <div style="width:90%; height:82%; border:1px solid #334155; border-radius:8px; position:relative; background:rgba(15,23,42,0.7); display:flex; align-items:center; justify-content:space-around; gap:6px; padding:0 10px;">
-                    <div class="sim-box-track" style="position:relative; width:74px; height:50px; flex-shrink:0;">
-                        <span class="sim-box-label">ID #01</span>
-                    </div>
-                    <div style="color:#94a3b8; font-family:var(--font-mono); font-size:10px; text-align:center; line-height:1.3;">
-                        Kamera Geser<br>&rarr; Tetap 1 ID &rarr;
-                    </div>
-                    <div class="sim-box-track" style="position:relative; width:74px; height:50px; flex-shrink:0; border-color:#22c55e; background:rgba(34,197,94,0.15);">
-                        <span class="sim-box-label" style="background:#16a34a;">Dihitung 1x</span>
-                    </div>
-                </div>
+                <svg class="stage-svg" viewBox="0 0 560 250" preserveAspectRatio="xMidYMid meet">
+                    <!-- Left Panel: Trajectory & ID Locking Visualization -->
+                    <rect x="18" y="18" width="328" height="214" rx="8" fill="#0b1322" stroke="#334155" stroke-width="1.5"/>
+                    <text x="32" y="38" fill="#38bdf8" font-family="monospace" font-size="10.5" font-weight="700">PELACAKAN LINTAS-FRAME (BYTETRACK)</text>
+
+                    <!-- Moving Camera Viewport Box -->
+                    <g class="svg-cam-pan">
+                        <rect x="48" y="50" width="268" height="162" rx="6" fill="none" stroke="rgba(56,189,248,0.4)" stroke-width="1.5" stroke-dasharray="5 4"/>
+                        <text x="58" y="65" fill="#64748b" font-family="monospace" font-size="9.5">Bingkai Kamera Bergerak &rarr;</text>
+                    </g>
+
+                    <!-- Track #01 Trajectory (Frame t-2 -> Frame t-1 -> Frame t) -->
+                    <path d="M 74 96 Q 130 88 192 94" fill="none" stroke="#22c55e" stroke-width="2" stroke-dasharray="4 4" class="svg-dash-flow"/>
+                    <circle cx="74" cy="96" r="5" fill="rgba(34,197,94,0.3)" stroke="#22c55e" stroke-width="1.2"/>
+                    <circle cx="132" cy="91" r="5" fill="rgba(34,197,94,0.5)" stroke="#22c55e" stroke-width="1.2"/>
+                    <rect x="174" y="76" width="76" height="34" rx="4" fill="rgba(34,197,94,0.16)" stroke="#22c55e" stroke-width="2"/>
+                    <text x="212" y="97" text-anchor="middle" fill="#4ade80" font-family="monospace" font-size="10.5" font-weight="700">ID #01 Lock</text>
+
+                    <!-- Track #02 Trajectory -->
+                    <path d="M 88 152 Q 148 160 206 150" fill="none" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 4" class="svg-dash-flow"/>
+                    <circle cx="88" cy="152" r="5" fill="rgba(56,189,248,0.3)" stroke="#38bdf8" stroke-width="1.2"/>
+                    <circle cx="146" cy="156" r="5" fill="rgba(56,189,248,0.5)" stroke="#38bdf8" stroke-width="1.2"/>
+                    <rect x="188" y="132" width="76" height="34" rx="4" fill="rgba(56,189,248,0.16)" stroke="#38bdf8" stroke-width="2"/>
+                    <text x="226" y="153" text-anchor="middle" fill="#38bdf8" font-family="monospace" font-size="10.5" font-weight="700">ID #02 Lock</text>
+
+                    <!-- Track #03 Trajectory -->
+                    <path d="M 64 192 L 154 190" fill="none" stroke="#eab308" stroke-width="2" stroke-dasharray="4 4" class="svg-dash-flow"/>
+                    <circle cx="64" cy="192" r="5" fill="rgba(234,179,8,0.3)" stroke="#eab308" stroke-width="1.2"/>
+                    <rect x="138" y="175" width="76" height="30" rx="4" fill="rgba(234,179,8,0.16)" stroke="#eab308" stroke-width="1.8"/>
+                    <text x="176" y="194" text-anchor="middle" fill="#facc15" font-family="monospace" font-size="10.5" font-weight="700">ID #03 Lock</text>
+
+                    <!-- Right Panel: Counter Comparison (Without Tracker vs With Tracker) -->
+                    <rect x="360" y="18" width="182" height="98" rx="8" fill="rgba(127,29,29,0.22)" stroke="rgba(239,68,68,0.45)"/>
+                    <text x="374" y="40" fill="#fca5a5" font-family="monospace" font-size="10" font-weight="700">TANPA PENGUNCI ID</text>
+                    <text x="374" y="72" fill="#ef4444" font-family="monospace" font-size="24" font-weight="800">18 Sampah</text>
+                    <text x="374" y="92" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">Salah hitung (3 objek yang</text>
+                    <text x="374" y="106" fill="#cbd5e1" font-family="sans-serif" font-size="10.5">sama dihitung di 6 frame)</text>
+
+                    <rect x="360" y="130" width="182" height="102" rx="8" fill="rgba(20,83,45,0.28)" stroke="#22c55e" stroke-width="1.8"/>
+                    <text x="374" y="152" fill="#86efac" font-family="monospace" font-size="10" font-weight="700">DENGAN PENGUNCI ID</text>
+                    <text x="374" y="184" fill="#4ade80" font-family="monospace" font-size="24" font-weight="800">3 Sampah</text>
+                    <text x="374" y="204" fill="#e2e8f0" font-family="sans-serif" font-size="10.5">Akurat 100% sesuai jumlah</text>
+                    <text x="374" y="218" fill="#e2e8f0" font-family="sans-serif" font-size="10.5">objek asli di lapangan</text>
+                </svg>
             `
         },
         {
@@ -1285,16 +1473,67 @@
             title: "4. Pengelompokan Lokasi & Visualisasi Peta Heatmap",
             desc: "Hasil hitungan sampah di setiap petak lokasi (~11x11 meter) langsung tersimpan di Cloud Firestore dan divisualisasikan pada peta web. Area dengan sedikit sampah berwarna Hijau, sedangkan tumpukan padat berwarna Merah sehingga tim kebersihan dapat langsung menuju lokasi prioritas.",
             pills: [
-                { k: "Ukuran Petak Lokasi", v: "~11 x 11 Meter" },
+                { k: "Ukuran Petak Lokasi", v: "~11 × 11 Meter" },
                 { k: "Indikator Warna", v: "Hijau (Sedikit) -> Merah (Padat)" },
                 { k: "Fitur Lapangan", v: "Alamat Jalan & Rute Maps" }
             ],
             visualHtml: `
-                <div style="width:86%; height:80%; border:1px solid #334155; border-radius:8px; position:relative; background:radial-gradient(circle at 35% 55%, rgba(239,68,68,0.65) 0%, rgba(249,115,22,0.45) 28%, rgba(234,179,8,0.25) 52%, rgba(34,197,94,0.12) 75%, transparent 90%); display:flex; align-items:center; justify-content:center;">
-                    <div style="background:#0f172a; border:1.5px solid #ef4444; color:#ffffff; padding:8px 14px; border-radius:8px; font-family:var(--font-mono); font-size:11.5px; font-weight:700; box-shadow:0 8px 20px rgba(0,0,0,0.4);">
-                        TITIK PRIORITAS · 32 Sampah &rarr; Rute Maps
-                    </div>
-                </div>
+                <svg class="stage-svg" viewBox="0 0 560 250" preserveAspectRatio="xMidYMid meet">
+                    <defs>
+                        <radialGradient id="kdeHot" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.88"/>
+                            <stop offset="38%" stop-color="#f97316" stop-opacity="0.65"/>
+                            <stop offset="70%" stop-color="#eab308" stop-opacity="0.32"/>
+                            <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+                        </radialGradient>
+                        <radialGradient id="kdeWarm" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stop-color="#eab308" stop-opacity="0.7"/>
+                            <stop offset="55%" stop-color="#22c55e" stop-opacity="0.35"/>
+                            <stop offset="100%" stop-color="#22c55e" stop-opacity="0"/>
+                        </radialGradient>
+                    </defs>
+
+                    <!-- Map Grid Cells (~11x11m Spatial Matrix) -->
+                    <g stroke="rgba(148,163,184,0.18)" stroke-width="1" fill="none">
+                        <rect x="28" y="20" width="90" height="68"/><rect x="118" y="20" width="90" height="68"/><rect x="208" y="20" width="90" height="68"/><rect x="298" y="20" width="90" height="68"/>
+                        <rect x="28" y="88" width="90" height="68"/><rect x="118" y="88" width="90" height="68"/><rect x="208" y="88" width="90" height="68"/><rect x="298" y="88" width="90" height="68"/>
+                        <rect x="28" y="156" width="90" height="68"/><rect x="118" y="156" width="90" height="68"/><rect x="208" y="156" width="90" height="68"/><rect x="298" y="156" width="90" height="68"/>
+                    </g>
+
+                    <!-- KDE Heatmap Layers -->
+                    <circle cx="105" cy="145" r="68" fill="url(#kdeWarm)" class="svg-heat-glow"/>
+                    <circle cx="248" cy="122" r="95" fill="url(#kdeHot)" class="svg-heat-glow"/>
+
+                    <!-- Haversine Clustering Radius Ring -->
+                    <circle cx="248" cy="122" r="46" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="5 4" opacity="0.8"/>
+
+                    <!-- Cluster Marker Pin #1 (Green/Yellow - 8 Objects) -->
+                    <circle cx="105" cy="145" r="14" fill="#22c55e" stroke="#0f172a" stroke-width="2"/>
+                    <text x="105" y="149" text-anchor="middle" fill="#0f172a" font-family="monospace" font-size="11" font-weight="800">8</text>
+
+                    <!-- Cluster Marker Pin #2 (Red Hotspot - 32 Objects) -->
+                    <circle cx="248" cy="122" r="18" fill="#ef4444" stroke="#ffffff" stroke-width="2.5"/>
+                    <text x="248" y="126" text-anchor="middle" fill="#ffffff" font-family="monospace" font-size="12.5" font-weight="800">32</text>
+
+                    <!-- Callout Connector Line to InfoWindow Card -->
+                    <polyline points="266,122 332,82 352,82" fill="none" stroke="#f8fafc" stroke-width="1.8"/>
+                    <circle cx="266" cy="122" r="3.5" fill="#ffffff"/>
+
+                    <!-- Simulated Modern InfoWindow Card on Right -->
+                    <rect x="352" y="34" width="188" height="178" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+                    <text x="366" y="56" fill="#0f172a" font-family="sans-serif" font-size="11.5" font-weight="800">TITIK PRIORITAS #1</text>
+                    <line x1="366" y1="64" x2="526" y2="64" stroke="#e2e8f0" stroke-width="1"/>
+
+                    <rect x="366" y="72" width="160" height="40" rx="5" fill="#fef2f2" stroke="#fecaca"/>
+                    <text x="446" y="97" text-anchor="middle" fill="#dc2626" font-family="monospace" font-size="16" font-weight="800">32 SAMPAH</text>
+
+                    <text x="366" y="128" fill="#334155" font-family="sans-serif" font-size="10.5" font-weight="600">Sel: -6.9248, 107.7176</text>
+                    <text x="366" y="144" fill="#64748b" font-family="sans-serif" font-size="10">Peak: 14 · ID Unik: 32</text>
+                    <text x="366" y="160" fill="#64748b" font-family="sans-serif" font-size="10">Confidence AI: 88%</text>
+
+                    <rect x="366" y="174" width="160" height="24" rx="5" fill="#2563eb"/>
+                    <text x="446" y="190" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="10.5" font-weight="700">Buka Rute Google Maps &nearr;</text>
+                </svg>
             `
         }
     ];
@@ -1308,7 +1547,15 @@
         const s = STORY_STAGES[currentStoryStep];
 
         document.querySelectorAll('.story-step-btn').forEach((btn, bIdx) => {
-            btn.classList.toggle('active', bIdx === currentStoryStep);
+            btn.classList.remove('active', 'playing-progress');
+            if (bIdx === currentStoryStep) {
+                btn.classList.add('active');
+                if (isStoryPlaying) {
+                    // Trigger reflow so CSS progress bar animation restarts cleanly
+                    void btn.offsetWidth;
+                    btn.classList.add('playing-progress');
+                }
+            }
         });
 
         document.getElementById('stage-badge-text').textContent = s.badge;
@@ -1328,7 +1575,7 @@
         stopStoryAutoPlay();
         storyInterval = setInterval(() => {
             renderStoryStage(currentStoryStep + 1);
-        }, 5500);
+        }, 6000);
     }
 
     function stopStoryAutoPlay() {
@@ -1354,6 +1601,7 @@
         isStoryPlaying = !isStoryPlaying;
         this.classList.toggle('playing', isStoryPlaying);
         this.textContent = isStoryPlaying ? "Putar Otomatis: Aktif" : "Putar Otomatis: Nonaktif";
+        renderStoryStage(currentStoryStep);
         if (isStoryPlaying) startStoryAutoPlay();
         else stopStoryAutoPlay();
     });
